@@ -34,3 +34,13 @@ CREATE TABLE IF NOT EXISTS member_admin_status (
  reason TEXT,
  updated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS ip_rate_limits (
+ action TEXT NOT NULL,
+ ip_hash TEXT NOT NULL,
+ window_start INTEGER NOT NULL,
+ attempts INTEGER NOT NULL DEFAULT 0,
+ updated_at INTEGER NOT NULL,
+ PRIMARY KEY(action,ip_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_ip_rate_limits_window ON ip_rate_limits(window_start);
