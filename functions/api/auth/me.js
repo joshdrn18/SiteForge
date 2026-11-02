@@ -1,0 +1,5 @@
+const enc=new TextEncoder();
+function b64(bytes){let s='';for(const b of new Uint8Array(bytes))s+=String.fromCharCode(b);return btoa(s).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}
+async function sha(value){return b64(await crypto.subtle.digest('SHA-256',enc.encode(value)))}
+function token(request){return (request.headers.get('Cookie')||'').split(';').map(v=>v.trim()).find(v=>v.startsWith('sf_member='))?.slice(10)}
+export async function onRequestGet({request,env}){if(!env.DB)return Response.json({error:'Database member belum dikonfigurasi.'},{status:503});const value=token(request);if(!value)return Response.json({error:'Belum login.'},{status:401});const row=await env.DB.prepare('SELECT m.id,m.email,m.display_name,s.expires_at FROM member_sessions s JOIN members m ON m.id=s.member_id WHERE s.token_hash=?').bind(await sha(value)).first();if(!row||row.expires_at<Date.now())return Response.json({error:'Sesi tidak berlaku.'},{status:401});return Response.json({user:{id:row.id,email:row.email,name:row.display_name}})}
