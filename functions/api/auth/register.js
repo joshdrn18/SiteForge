@@ -40,7 +40,7 @@ export async function onRequestPost({ request, env }) {
     const email = String(body.email || "").trim().toLowerCase();
     const password = String(body.password || "");
 
-    if (name.length < 2 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || password.length < 12) {
+    if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12) {
       return Response.json({ error: "Isi nama, email valid, dan password minimal 12 karakter." }, { status: 400 });
     }
 
