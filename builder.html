@@ -16,7 +16,7 @@
     .template-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.template-card{border:1px solid #e5e5df;background:#fff;border-radius:8px;text-align:left;padding:8px;display:grid;grid-template-columns:35px 1fr;column-gap:8px;align-items:center;color:#55574f}.template-card.selected{border-color:#a7d24a;background:#f8ffe9;box-shadow:0 0 0 2px #c9f36a2b}.template-thumb{grid-row:span 2;width:35px;height:38px;border-radius:5px;display:grid;place-items:center;font-size:16px}.cafe-thumb{background:#f1e2cf}.studio-thumb{background:#dcedb6}.beauty-thumb{background:#eadbd7}.portfolio-thumb{background:#d9e1e8}.template-card b{font-size:10px}.template-card small{font-size:9px;color:#8c8e86}  </style>
 </head>
 <body>
-  <header class="topbar"><div class="brand"><span class="brand-mark">✳</span><span contenteditable="true" spellcheck="true">siteforge</span></div><div class="top-right"><span contenteditable="true" spellcheck="true">Projects</span><span contenteditable="true" spellcheck="true">Templates</span><a class="member-link" href="/account.html">Masuk / Daftar</a><span class="avatar">M</span></div></header>
+  <header class="topbar"><div class="brand"><span class="brand-mark">✳</span><span contenteditable="true" spellcheck="true">siteforge</span></div><div class="top-right"><span contenteditable="true" spellcheck="true">Projects</span><span contenteditable="true" spellcheck="true">Templates</span><a class="member-link" href="/dashboard.html">Dashboard</a><span class="avatar">M</span></div></header>
   <main class="shell">
     <div class="heading-row"><div><div class="eyebrow">WORKSPACE / NEW PROJECT</div><h1 contenteditable="true" spellcheck="true">Make a website<br>that feels like you.</h1><p contenteditable="true" spellcheck="true">Jelaskan idemu. Kami bantu mengubahnya jadi website siap pakai.</p></div><div class="status"><i></i> Generator siap</div></div>
     <div class="workspace">
@@ -43,7 +43,7 @@
         </form>
       </section>
       <section class="preview-panel">
-        <div class="preview-toolbar"><div class="device-tabs"><button class="selected" data-device="desktop">▰ &nbsp; Desktop</button><button data-device="mobile">▯ &nbsp; Mobile</button></div><div class="actions"><button id="refresh">↻ &nbsp; Refresh</button><button class="publish" id="download">↓ &nbsp; Export</button></div></div>
+        <div class="preview-toolbar"><div class="device-tabs"><button class="selected" data-device="desktop">▰ &nbsp; Desktop</button><button data-device="mobile">▯ &nbsp; Mobile</button></div><div class="actions"><button id="refresh">↻ &nbsp; Refresh</button><button id="saveDraft" type="button" title="Simpan draft ke akun">▣ &nbsp; Simpan</button><button class="publish" id="download">↓ &nbsp; Export</button></div></div>
         <div class="browser" id="browser"><div class="browser-top"><i></i><i></i><i></i><div class="url" id="domain">ruang-senja.siteforge.site</div></div><div class="site-content">
           <nav class="site-nav"><div class="site-logo" id="logo">ruang senja.</div><div class="site-links"><span>Our story</span><span>Menu</span><span>Visit us</span></div><span class="site-cta">Find your seat ↗</span></nav>
           <section class="hero"><div class="hero-copy"><div class="tag" id="heroTag">A LITTLE PLACE TO PAUSE</div><h2 id="heroTitle">Temukan jeda<br>di tengah hari.</h2><p id="heroDesc">Kopi yang diseduh pelan, suasana yang hangat, dan ruang untuk bernapas sejenak.</p><span class="hero-button">Come on in &nbsp; ↗</span><span class="hero-note">Jl. Kemang Raya No. 18 · Jakarta Selatan</span></div><div class="hero-art" role="button" tabindex="0" aria-label="Klik untuk memilih gambar utama"><span class="sun"></span><span class="hill"></span><span class="hill two"></span></div></section>
@@ -71,6 +71,103 @@
     $('#download').addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const name=business.value.trim()||'Your business',seoTitle=$('#seoTitle').value.trim()||name,metaDesc=$('#metaDescription').value.trim()||description.value.trim(),path=slug($('#siteSlug').value||name),keys=$('#keywords').value.trim(),img=$('#ogImage').value.trim(),desc=description.value.trim(),tag=$('#heroTag').textContent,headline=$('#heroTitle').innerText;const html=`<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(seoTitle)}</title><meta name="description" content="${esc(metaDesc)}"><meta name="keywords" content="${esc(keys)}"><link rel="canonical" href="https://${esc(path)}.siteforge.site/"><meta property="og:type" content="website"><meta property="og:title" content="${esc(seoTitle)}"><meta property="og:description" content="${esc(metaDesc)}">${img?`<meta property="og:image" content="${esc(img)}">`:''}<meta name="twitter:card" content="${img?'summary_large_image':'summary'}"><meta name="twitter:title" content="${esc(seoTitle)}"><meta name="twitter:description" content="${esc(metaDesc)}"><meta name="robots" content="index,follow"><meta name="theme-color" content="#f7f7f2"></head><style>*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;color:#252620}nav{padding:22px 8%;display:flex;justify-content:space-between;border-bottom:1px solid #eee}nav b{font-size:20px}nav a{color:inherit;text-decoration:none}main{min-height:80vh;background:#f7f7f2;padding:12vh 10%;display:grid;grid-template-columns:1fr 1fr;gap:35px;align-items:center}.tag{font-size:11px;letter-spacing:2px;color:#73766e}h1{font:normal clamp(42px,7vw,76px)/1.05 Georgia,serif;letter-spacing:-2px;margin:18px 0}p{color:#73756f;line-height:1.8;max-width:410px}.button{display:inline-block;background:#252620;color:white;padding:14px 20px;text-decoration:none;margin-top:12px}.art{height:370px;background:linear-gradient(145deg,#e7c79e 0 30%,#82907b 31% 62%,#435a4d 63%);border-radius:45% 45% 3px 3px}@media(max-width:650px){main{grid-template-columns:1fr;padding:9vh 8%}.art{height:210px;grid-row:1}}</style><body><nav><b>${esc(name.toLowerCase())}.</b><a href="mailto:hello@example.com">Contact ↗</a></nav><main><div><div class="tag">${esc(tag)}</div><h1>${esc(headline).replace(/\n/g,'<br>')}</h1><p>${esc(desc)}</p><a class="button" href="mailto:hello@example.com">Come on in ↗</a></div><div class="art"></div></main></body></html>`;const blob=new Blob([html],{type:'text/html'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=path+'.html';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Website + metadata SEO berhasil diunduh')},true);
     function seoUpdate(){const t=$('#seoTitle').value,d=$('#metaDescription').value,s=$('#siteSlug');$('#titleCount').textContent=t.length+'/60';$('#descCount').textContent=d.length+'/160';$('#checkTitle').textContent=t.length?'✓ Judul terisi':'• Tambahkan judul';$('#checkTitle').classList.toggle('invalid',!t.length);$('#checkDesc').textContent=d.length?'✓ Deskripsi terisi':'• Tambahkan deskripsi';$('#checkDesc').classList.toggle('invalid',!d.length);$('#checkSlug').textContent=s.value.trim()?'✓ URL siap':'• Isi URL halaman';$('#checkSlug').classList.toggle('invalid',!s.value.trim());const score=[!!t.length,t.length>=30&&t.length<=60,!!d.length,d.length>=70&&d.length<=160,!!s.value.trim()].filter(Boolean).length;$('#seoScore').textContent='SEO CHECK · '+score+'/5';$('#domain').textContent=(s.value.trim()||'my-site')+'.siteforge.site'}
     ['seoTitle','metaDescription','siteSlug','keywords','ogImage'].forEach(id=>$('#'+id).addEventListener('input',seoUpdate));business.addEventListener('input',()=>{if(!$('#siteSlug').dataset.edited)$('#siteSlug').value=slug(business.value);if(!$('#seoTitle').dataset.edited)$('#seoTitle').value=business.value.trim()+' | '+$('#type').value+' di Jakarta';seoUpdate()});$('#siteSlug').addEventListener('input',e=>{e.target.dataset.edited='true';e.target.value=slug(e.target.value)});$('#seoTitle').addEventListener('input',e=>e.target.dataset.edited='true');$('#type').addEventListener('change',()=>{if(!$('#seoTitle').dataset.edited)$('#seoTitle').value=business.value.trim()+' | '+$('#type').value+' di Jakarta';seoUpdate()});seoUpdate();update();
+
+    let editingSiteId=new URLSearchParams(location.search).get('site');
+    function draftContent(){
+      const image=heroImage.value.trim()||heroImage.dataset.dataUrl||'';
+      const favicon=faviconUrl.value.trim()||faviconPreview.dataset.dataUrl||'';
+      return {
+        version:1,business:business.value.trim(),type:$('#type').value,description:description.value.trim(),
+        style,template:document.querySelector('.template-card.selected')?.dataset.template||'cafe',
+        seoTitle:$('#seoTitle').value.trim(),metaDescription:$('#metaDescription').value.trim(),
+        slug:$('#siteSlug').value.trim(),keywords:$('#keywords').value.trim(),heroImage:image,
+        favicon,ogImage:$('#ogImage').value.trim(),
+        copy:{
+          logo:$('#logo').innerText.trim(),
+          links:Array.from(document.querySelectorAll('.site-links span')).map(x=>x.innerText.trim()),
+          cta:$('.site-cta').innerText.trim(),tag:$('#heroTag').innerText.trim(),
+          title:$('#heroTitle').innerText,description:$('#heroDesc').innerText.trim(),
+          button:$('.hero-button').innerText.trim(),note:$('.hero-note').innerText.trim(),
+          features:allFeatures.map(x=>({num:x.querySelector('.num').innerText.trim(),title:x.querySelector('h3').innerText.trim(),text:x.querySelector('p').innerText.trim()}))
+        }
+      };
+    }
+    function setTextLines(el,value){
+      el.replaceChildren();
+      String(value||'').split(/\r?\n/).forEach((line,index)=>{
+        if(index)el.append(document.createElement('br'));
+        el.append(document.createTextNode(line));
+      });
+    }
+    function safeImage(value){
+      const source=String(value||'').trim();
+      if(/^data:image\/(?:png|jpeg|webp|gif|svg\+xml);base64,/i.test(source))return source;
+      try{const u=new URL(source,location.href);return ['http:','https:'].includes(u.protocol)?source:''}catch{return ''}
+    }
+    function applyDraft(site){
+      const c=site.content||{};
+      if(c.template&&templates[c.template])applyTemplate(c.template);
+      if(c.style)document.querySelectorAll('.style-option').forEach(x=>{if(x.dataset.style===c.style)x.click()});
+      business.value=site.name||c.business||business.value;
+      $('#type').value=c.type||$('#type').value;
+      description.value=c.description||'';
+      $('#seoTitle').value=c.seoTitle||'';
+      $('#seoTitle').dataset.edited='true';
+      $('#metaDescription').value=c.metaDescription||'';
+      $('#siteSlug').value=site.slug||c.slug||'';
+      $('#siteSlug').dataset.edited='true';
+      $('#keywords').value=c.keywords||'';
+      $('#ogImage').value=c.ogImage||'';
+      const hero=safeImage(c.heroImage);
+      if(hero.startsWith('data:')){heroImage.value='';heroImage.dataset.dataUrl=hero}else{heroImage.value=hero;delete heroImage.dataset.dataUrl}
+      const icon=safeImage(c.favicon);
+      if(icon.startsWith('data:')){faviconUrl.value='';setFavicon(icon)}else{faviconUrl.value=icon;setFavicon(icon)}
+      update();
+      setHeroImage();
+      const copy=c.copy||{};
+      $('#logo').textContent=copy.logo||($('#business').value.trim().toLowerCase()+'.');
+      if(Array.isArray(copy.links))document.querySelectorAll('.site-links span').forEach((x,i)=>{if(copy.links[i]!=null)x.textContent=copy.links[i]});
+      if(copy.cta!=null)$('.site-cta').textContent=copy.cta;
+      if(copy.tag!=null)$('#heroTag').textContent=copy.tag;
+      if(copy.title!=null)setTextLines($('#heroTitle'),copy.title);
+      if(copy.description!=null)$('#heroDesc').textContent=copy.description;
+      if(copy.button!=null)$('.hero-button').textContent=copy.button;
+      if(copy.note!=null)$('.hero-note').textContent=copy.note;
+      if(Array.isArray(copy.features))allFeatures.forEach((x,i)=>{const f=copy.features[i];if(f){x.querySelector('.num').textContent=f.num||'';x.querySelector('h3').textContent=f.title||'';x.querySelector('p').textContent=f.text||''}});
+      seoUpdate();
+      document.querySelector('.eyebrow').textContent='WORKSPACE / EDIT DRAFT';
+    }
+    async function loadDraft(){
+      if(!editingSiteId)return;
+      const response=await fetch('/api/sites/'+encodeURIComponent(editingSiteId));
+      const data=await response.json().catch(()=>({}));
+      if(response.status===401){location.replace('/account.html?next='+encodeURIComponent(location.pathname+location.search));return}
+      if(!response.ok){toast(data.error||'Draft tidak bisa dibuka.');return}
+      applyDraft(data.site);
+      $('#saveDraft').textContent='▣  Perbarui';
+    }
+    async function saveDraft(){
+      const button=$('#saveDraft'),oldLabel=button.textContent;
+      const body={name:business.value.trim(),slug:$('#siteSlug').value.trim(),content:draftContent()};
+      if(!body.name){toast('Isi nama bisnis dulu.');return}
+      button.disabled=true;button.textContent='Menyimpan…';
+      try{
+        const endpoint=editingSiteId?'/api/sites/'+encodeURIComponent(editingSiteId):'/api/sites';
+        const response=await fetch(endpoint,{method:editingSiteId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const type=response.headers.get('content-type')||'',data=type.includes('application/json')?await response.json():null;
+        if(response.status===401){location.replace('/account.html?next='+encodeURIComponent(location.pathname+location.search));return}
+        if(!data)throw new Error('Balasan API tidak valid (HTTP '+response.status+').');
+        if(!response.ok)throw new Error(data.error||'Gagal menyimpan draft.');
+        editingSiteId=data.site.id;
+        history.replaceState(null,'','/builder.html?site='+encodeURIComponent(editingSiteId));
+        button.textContent='▣  Perbarui';
+        toast('Draft tersimpan di dashboard.');
+      }catch(error){toast(error.message||'Draft gagal disimpan.')}
+      finally{button.disabled=false;if(button.textContent==='Menyimpan…')button.textContent=oldLabel}
+    }
+    $('#saveDraft').addEventListener('click',saveDraft);
+    loadDraft();
+
   </script>
 </body>
 </html>

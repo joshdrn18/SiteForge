@@ -21,3 +21,9 @@ CREATE TABLE IF NOT EXISTS admin_audit_events (
  target_type TEXT NOT NULL, target_id TEXT NOT NULL, reason TEXT,
  created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS site_content (
+ site_id TEXT PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+ content_json TEXT NOT NULL DEFAULT '{}',
+ updated_at INTEGER NOT NULL
+);

@@ -7,7 +7,7 @@ Admin authentication is not active until the encrypted secrets below are configu
 In Cloudflare Dashboard → Workers & Pages → SiteForge → Settings → Variables and Secrets, add encrypted secrets for Production (and Preview only if desired):
 
 - `ADMIN_EMAIL`: the master admin email supplied by the owner.
-- `ADMIN_PASSWORD_HASH`: PBKDF2 hash in `base64url(salt).base64url(hash)` format. Use SHA-256, 310,000 iterations, 16-byte random salt, and 32-byte output.
+- `ADMIN_PASSWORD_HASH`: PBKDF2 hash in `base64url(salt).base64url(hash)` format. Use SHA-256, 100,000 iterations, 16-byte random salt, and 32-byte output.
 - `SESSION_SECRET`: at least 32 random bytes, base64url encoded.
 
 Redeploy after setting secrets. The Pages middleware protects `/admin.html`; sessions use signed, HttpOnly, Secure, SameSite=Strict cookies that expire after 8 hours.
@@ -22,7 +22,7 @@ const password = process.env.SITEFORGE_ADMIN_PASSWORD;
 if (!password) throw new Error('Set SITEFORGE_ADMIN_PASSWORD first');
 const salt = webcrypto.getRandomValues(new Uint8Array(16));
 const key = await webcrypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
-const bits = new Uint8Array(await webcrypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations:310000},key,256));
+const bits = new Uint8Array(await webcrypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations:100000},key,256));
 const enc = b => Buffer.from(b).toString('base64url');
 console.log(enc(salt)+'.'+enc(bits));
 ```

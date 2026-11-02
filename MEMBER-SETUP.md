@@ -22,9 +22,12 @@ For the separate master-admin login, add encrypted Pages secrets:
 ## 4. Deploy
 Redeploy SiteForge from the repository root. Member routes:
 - `/account.html` — signup and login.
+- `/dashboard.html` — private list of saved website drafts.
+- `/builder.html` — create or edit a saved draft.
 - `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`.
+- `/api/sites` and `/api/sites/:id` — owner-scoped draft storage.
 
 Passwords are PBKDF2-hashed server-side; the database stores only password salt/hash and hashed session tokens. Session cookies are HttpOnly, Secure, and SameSite=Lax.
 
 ## Current scope
-Member authentication and admin monitoring APIs are implemented. The admin dashboard reads D1 metrics and supports site status/report review actions with an audit trail. Site publishing and member draft persistence are not yet connected, so site/deploy metrics remain empty until those features write to the tables. Password reset, email verification, and abuse rate limiting are not yet connected.
+Member authentication, draft storage, and the member dashboard use D1. `admin-schema.sql` now also creates `site_content`; if the previous version was already applied, run the updated file once more (all statements are safe to rerun). Drafts can be saved and edited. Public publishing to generated domains is still a separate feature. Password reset, email verification, and abuse rate limiting are not yet connected.

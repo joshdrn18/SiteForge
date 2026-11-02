@@ -48,4 +48,4 @@ Validasi tipe/ukuran aset, escape teks, larang HTML/JS bebas, reserve slug siste
 ## Implementasi saat ini
 - `index.html`: prototype builder.
 - `admin.html`: prototype admin dengan data contoh dan interaksi demo.
-- Backend, auth, storage, deploy otomatis, metrik produksi, dan otorisasi admin belum terhubung.
+- Login member, penyimpanan draft ke D1, dashboard member, dan API admin sudah terhubung. Publish otomatis ke domain publik belum tersedia.
