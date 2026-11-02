@@ -13,6 +13,7 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 .eyebrow{font:10px 'DM Mono',monospace;letter-spacing:1.4px;color:#858780;text-transform:uppercase}h1{font:700 clamp(30px,5vw,42px) Manrope,Arial,sans-serif;letter-spacing:-1.8px;margin:9px 0 6px}.sub{margin:0;color:#777b72;font-size:14px}
 .btn{display:inline-flex;align-items:center;gap:8px;background:#20211f;color:white;padding:12px 16px;border-radius:8px;font-weight:700;font-size:12px}.btn span{color:#c9f36a}.btn.disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
 .notice{border:1px solid #edc7c1;background:#fff5f3;color:#a8463b;padding:12px 14px;border-radius:8px;font-size:12px;margin:0 0 18px}.notice[hidden]{display:none}
+.plan-card{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#fff;border:1px solid #e8e8e1;border-radius:12px;padding:18px 20px;margin:0 0 22px}.plan-card[hidden]{display:none}.plan-card h2{font:700 17px Manrope,Arial,sans-serif;margin:5px 0}.plan-card p{margin:0;color:#777b72;font-size:12px;line-height:1.5}.plan-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plan-actions button{border:0}.plan-actions .upgrade{background:#c9f36a;color:#20211f}.plan-actions .cancel{background:#fff;color:#777b72;border:1px solid #e4e5de;padding:10px 12px;border-radius:8px;font-size:11px;font-weight:650}.plan-actions button:disabled{opacity:.55;cursor:not-allowed}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.grid[hidden],.empty[hidden]{display:none}
 .card{background:#fff;border:1px solid #e8e8e1;border-radius:12px;overflow:hidden}
 .thumb{height:132px;background:linear-gradient(145deg,#dfe5d9 0 42%,#87957f 43% 72%,#475d50 73%);position:relative;padding:14px;display:flex;align-items:flex-start;justify-content:space-between}
@@ -22,7 +23,7 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 .actions{display:flex;gap:8px;margin-top:15px}.actions a,.actions button{flex:1;text-align:center;border:1px solid #e4e5de;background:#fff;border-radius:7px;padding:9px 10px;font-size:11px;font-weight:650}.actions .edit{background:#c9f36a;border-color:#c9f36a}.actions .publish{background:#20211f;border-color:#20211f;color:white}.actions .view{background:#f4f5ef}.actions .delete{color:#a84c42}
 .empty{padding:55px 20px;text-align:center;background:#fff;border:1px dashed #d8d9d1;border-radius:12px}.empty .icon{font-size:28px}.empty h2{font:700 19px Manrope;margin:12px 0 6px}.empty p{max-width:390px;margin:0 auto 18px;color:#777b72;font-size:13px;line-height:1.6}
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.topbar{height:62px;padding:0 16px}.right{gap:8px}.email{display:none}main{padding:32px 15px 60px}.heading{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.thumb{height:115px}}
+@media(max-width:560px){.topbar{height:62px;padding:0 16px}.right{gap:8px}.email{display:none}main{padding:32px 15px 60px}.heading{align-items:flex-start;flex-direction:column}.plan-card{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.thumb{height:115px}}
 </style>
 </head>
 <body>
@@ -30,12 +31,75 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 <main>
 <section class="heading"><div><div class="eyebrow">WORKSPACE / MEMBER</div><h1>Website kamu</h1><p class="sub" id="siteUsage">Paket gratis: 0 / 2 website</p></div><a class="btn" id="createSite" href="/builder.html">Buat website <span>↗</span></a></section>
 <div id="notice" class="notice" role="status" hidden></div>
+<section id="planCard" class="plan-card" hidden><div><div class="eyebrow" id="planLabel">PAKET</div><h2 id="planTitle">Paket Gratis</h2><p id="planDescription"></p></div><div class="plan-actions"><button id="upgradeButton" class="btn upgrade" type="button">Upgrade Pro</button><button id="cancelButton" class="cancel" type="button" hidden>Batalkan perpanjangan</button></div></section>
 <section id="loading" class="empty"><p>Memuat website kamu…</p></section>
 <section id="empty" class="empty" hidden><div class="icon">✳</div><h2>Belum ada website</h2><p>Mulai dari template, sesuaikan konten dan SEO, lalu simpan sebagai draft.</p><a class="btn" href="/builder.html">Buat website <span>↗</span></a></section>
 <section id="grid" class="grid" hidden></section>
 </main>
 <script>
 const $=s=>document.querySelector(s),grid=$("#grid"),notice=$("#notice");
+let billingState=null;
+function priceLabel(amount,currency,country){
+  if(!amount||!currency)return "";
+  try{return new Intl.NumberFormat(country==="MY"?"ms-MY":"id-ID",{style:"currency",currency,maximumFractionDigits:currency==="IDR"?0:2}).format(amount)}catch{return amount+" "+currency}
+}
+function renderPlan(billing){
+  billingState=billing;
+  const card=$("#planCard"),upgrade=$("#upgradeButton"),cancel=$("#cancelButton"),sub=billing.subscription;
+  const pro=billing.plan==="pro";
+  card.hidden=false;
+  $("#planLabel").textContent=pro?"PAKET PRO":"PAKET GRATIS";
+  if(pro){
+    $("#planTitle").textContent=sub?.status==="cancelled"?"Langganan dibatalkan":"Paket Pro aktif";
+    $("#planDescription").textContent="Batas 10 website. Akses Pro berlaku sampai "+new Date(Number(sub?.currentPeriodEnd||0)).toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})+".";
+    upgrade.hidden=true;
+    cancel.hidden=sub?.status==="cancelled";
+    return;
+  }
+  if(sub?.status==="active"||sub?.status==="past_due"){
+    $("#planTitle").textContent=sub.status==="past_due"?"Pembayaran perlu diperbarui":"Pembayaran menunggu konfirmasi";
+    $("#planDescription").textContent=sub.status==="past_due"?"Akses Pro belum aktif atau pembayaran berikutnya tertunda. Batalkan langganan yang sedang berjalan sebelum mencoba checkout baru.":"Xendit sedang mengonfirmasi pembayaran pertama. Kuota Pro dibuka setelah pembayaran berhasil.";
+    upgrade.hidden=true;
+    cancel.hidden=!sub.canCancel;
+    return;
+  }
+  if(sub?.status==="pending"){
+    $("#planTitle").textContent="Checkout Pro belum selesai";
+    $("#planDescription").textContent="Selesaikan pembayaran di halaman Xendit untuk membuka batas 10 website.";
+    upgrade.textContent=sub.checkoutUrl?"Lanjutkan checkout":"Coba checkout lagi";
+    cancel.hidden=!sub.canCancel;
+  }else{
+    $("#planTitle").textContent="Paket Gratis";
+    const price=priceLabel(billing.price,billing.currency,billing.country);
+    $("#planDescription").textContent="Gratis sampai 2 website. Pro membuka batas 10 website"+(price?" dengan biaya "+price+" per bulan.":".");
+    upgrade.textContent=billing.checkoutEnabled&&price?"Upgrade Pro · "+price+"/bln":"Pro belum diaktifkan";
+  }
+  upgrade.hidden=false;
+  upgrade.disabled=!billing.checkoutEnabled&&!sub?.checkoutUrl;
+  cancel.hidden=true;
+}
+async function startCheckout(){
+  if(!billingState?.checkoutEnabled&&!billingState?.subscription?.checkoutUrl){showError("Langganan belum dikonfigurasi admin.");return}
+  const button=$("#upgradeButton");button.disabled=true;
+  try{
+    if(billingState.subscription?.checkoutUrl){location.assign(billingState.subscription.checkoutUrl);return}
+    const response=await fetch("/api/billing/checkout",{method:"POST"}),data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Checkout gagal dibuat.");
+    if(!data.checkoutUrl)throw new Error("Tautan checkout tidak tersedia.");
+    location.assign(data.checkoutUrl);
+  }catch(error){showError(error.message)}
+  finally{button.disabled=false}
+}
+async function cancelSubscription(){
+  if(!confirm("Batalkan perpanjangan otomatis? Akses Pro tetap berlaku sampai akhir periode yang sudah dibayar."))return;
+  const button=$("#cancelButton");button.disabled=true;
+  try{
+    const response=await fetch("/api/billing/cancel",{method:"POST"}),data=await response.json();
+    if(!response.ok)throw new Error(data.error||"Langganan gagal dibatalkan.");
+    await loadSites();
+  }catch(error){showError(error.message)}
+  finally{button.disabled=false}
+}
 function showError(message){notice.textContent=message;notice.hidden=false}
 function makeCard(site){
   const card=document.createElement("article");card.className="card";
@@ -72,15 +136,20 @@ async function loadSites(){
   $("#email").textContent=member.user.email;$("#avatar").textContent=(member.user.name||"M").trim().slice(0,1).toUpperCase()||"M";
   const response=await fetch("/api/sites"),data=await response.json();
   if(!response.ok)throw new Error(data.error||"Website gagal dimuat.");
+  const billingResponse=await fetch("/api/billing/status"),billing=await billingResponse.json();
+  if(!billingResponse.ok)throw new Error(billing.error||"Status paket gagal dimuat.");
+  renderPlan(billing);
   const limit=Number(data.siteLimit)||2,count=(data.sites||[]).length,create=$("#createSite"),full=count>=limit;
-  $("#siteUsage").textContent="Paket gratis: "+count+" / "+limit+" website";
+  $("#siteUsage").textContent=(data.plan==="pro"?"Paket Pro: ":"Paket gratis: ")+count+" / "+limit+" website";
   create.classList.toggle("disabled",full);create.dataset.limitFull=full?"true":"false";create.setAttribute("aria-disabled",full?"true":"false");
-  create.innerHTML=full?"Kuota gratis penuh":"Buat website <span>↗</span>";
+  create.innerHTML=full?(data.plan==="pro"?"Kuota Pro penuh":"Kuota gratis penuh"):"Buat website <span>↗</span>";
   $("#loading").hidden=true;
   if(!data.sites||!data.sites.length){$("#empty").hidden=false;return}
   data.sites.forEach(site=>grid.append(makeCard(site)));grid.hidden=false;
 }
-$("#createSite").addEventListener("click",event=>{if($("#createSite").dataset.limitFull==="true"){event.preventDefault();showError("Batas gratis tercapai. Hapus salah satu website dulu untuk membuat yang baru.")}});
+$("#createSite").addEventListener("click",event=>{if($("#createSite").dataset.limitFull==="true"){event.preventDefault();showError(billingState?.plan==="pro"?"Batas 10 website Pro sudah tercapai.":"Batas gratis tercapai. Upgrade Pro untuk menyimpan sampai 10 website.")}});
+$("#upgradeButton").addEventListener("click",startCheckout);
+$("#cancelButton").addEventListener("click",cancelSubscription);
 $("#logout").addEventListener("click",async()=>{try{await fetch("/api/auth/logout",{method:"POST"})}finally{location.replace("/account.html")}});
 loadSites().catch(error=>{$("#loading").hidden=true;showError(error.message||"Dashboard gagal dimuat.")});
 </script>
