@@ -27,3 +27,10 @@ CREATE TABLE IF NOT EXISTS site_content (
  content_json TEXT NOT NULL DEFAULT '{}',
  updated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS member_admin_status (
+ member_id TEXT PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
+ status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','suspended')),
+ reason TEXT,
+ updated_at INTEGER NOT NULL
+);
