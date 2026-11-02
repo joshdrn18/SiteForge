@@ -13,7 +13,7 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 .eyebrow{font:10px 'DM Mono',monospace;letter-spacing:1.4px;color:#858780;text-transform:uppercase}h1{font:700 clamp(30px,5vw,42px) Manrope,Arial,sans-serif;letter-spacing:-1.8px;margin:9px 0 6px}.sub{margin:0;color:#777b72;font-size:14px}
 .btn{display:inline-flex;align-items:center;gap:8px;background:#20211f;color:white;padding:12px 16px;border-radius:8px;font-weight:700;font-size:12px}.btn span{color:#c9f36a}.btn.disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
 .notice{border:1px solid #edc7c1;background:#fff5f3;color:#a8463b;padding:12px 14px;border-radius:8px;font-size:12px;margin:0 0 18px}.notice[hidden]{display:none}
-.plan-card{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#fff;border:1px solid #e8e8e1;border-radius:12px;padding:18px 20px;margin:0 0 22px}.plan-card[hidden]{display:none}.plan-card h2{font:700 17px Manrope,Arial,sans-serif;margin:5px 0}.plan-card p{margin:0;color:#777b72;font-size:12px;line-height:1.5}.plan-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plan-actions button{border:0}.plan-actions .upgrade{background:#c9f36a;color:#20211f}.plan-actions .cancel{background:#fff;color:#777b72;border:1px solid #e4e5de;padding:10px 12px;border-radius:8px;font-size:11px;font-weight:650}.plan-actions button:disabled{opacity:.55;cursor:not-allowed}
+.plan-card{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#fff;border:1px solid #e8e8e1;border-radius:12px;padding:18px 20px;margin:0 0 22px}.plan-card[hidden]{display:none}.plan-card h2{font:700 17px Manrope,Arial,sans-serif;margin:5px 0}.plan-card p{margin:0;color:#777b72;font-size:12px;line-height:1.5}.plan-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plan-select{min-width:190px;border:1px solid #e4e5de;border-radius:8px;background:#fbfaf7;padding:11px 12px;font:inherit;font-size:12px}.plan-select[hidden]{display:none}.plan-actions button{border:0}.plan-actions .upgrade{background:#c9f36a;color:#20211f}.plan-actions .cancel{background:#fff;color:#777b72;border:1px solid #e4e5de;padding:10px 12px;border-radius:8px;font-size:11px;font-weight:650}.plan-actions button:disabled{opacity:.55;cursor:not-allowed}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.grid[hidden],.empty[hidden]{display:none}
 .card{background:#fff;border:1px solid #e8e8e1;border-radius:12px;overflow:hidden}
 .thumb{height:132px;background:linear-gradient(145deg,#dfe5d9 0 42%,#87957f 43% 72%,#475d50 73%);position:relative;padding:14px;display:flex;align-items:flex-start;justify-content:space-between}
@@ -31,7 +31,7 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 <main>
 <section class="heading"><div><div class="eyebrow">WORKSPACE / MEMBER</div><h1>Website kamu</h1><p class="sub" id="siteUsage">Paket gratis: 0 / 2 website</p></div><a class="btn" id="createSite" href="/builder.html">Buat website <span>↗</span></a></section>
 <div id="notice" class="notice" role="status" hidden></div>
-<section id="planCard" class="plan-card" hidden><div><div class="eyebrow" id="planLabel">PAKET</div><h2 id="planTitle">Paket Gratis</h2><p id="planDescription"></p></div><div class="plan-actions"><button id="upgradeButton" class="btn upgrade" type="button">Upgrade Pro</button><button id="cancelButton" class="cancel" type="button" hidden>Batalkan perpanjangan</button></div></section>
+<section id="planCard" class="plan-card" hidden><div><div class="eyebrow" id="planLabel">PAKET</div><h2 id="planTitle">Paket Gratis</h2><p id="planDescription"></p></div><div class="plan-actions"><select id="packageSelect" class="plan-select" aria-label="Pilih paket"></select><button id="upgradeButton" class="btn upgrade" type="button">Pilih paket</button><button id="cancelButton" class="cancel" type="button" hidden>Batalkan perpanjangan</button></div></section>
 <section id="loading" class="empty"><p>Memuat website kamu…</p></section>
 <section id="empty" class="empty" hidden><div class="icon">✳</div><h2>Belum ada website</h2><p>Mulai dari template, sesuaikan konten dan SEO, lalu simpan sebagai draft.</p><a class="btn" href="/builder.html">Buat website <span>↗</span></a></section>
 <section id="grid" class="grid" hidden></section>
@@ -45,45 +45,70 @@ function priceLabel(amount,currency,country){
 }
 function renderPlan(billing){
   billingState=billing;
-  const card=$("#planCard"),upgrade=$("#upgradeButton"),cancel=$("#cancelButton"),sub=billing.subscription;
-  const pro=billing.plan==="pro";
+  const card=$("#planCard"),upgrade=$("#upgradeButton"),cancel=$("#cancelButton"),select=$("#packageSelect"),sub=billing.subscription;
+  const paid=billing.plan!=="free";
   card.hidden=false;
-  $("#planLabel").textContent=pro?"PAKET PRO":"PAKET GRATIS";
-  if(pro){
-    $("#planTitle").textContent=sub?.status==="cancelled"?"Langganan dibatalkan":"Paket Pro aktif";
-    $("#planDescription").textContent="Batas 10 website. Akses Pro berlaku sampai "+new Date(Number(sub?.currentPeriodEnd||0)).toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})+".";
+  $("#planLabel").textContent=paid?"PAKET MEMBER":"PAKET GRATIS";
+  select.replaceChildren();
+  if(paid){
+    $("#planTitle").textContent=sub?.status==="cancelled"?"Langganan dibatalkan":"Paket "+(billing.packageName||"Member")+" aktif";
+    const until=Number(billing.planEndsAt||sub?.currentPeriodEnd||0);
+    const endText=until?"Akses berlaku sampai "+new Date(until).toLocaleDateString("id-ID",{day:"numeric",month:"long",year:"numeric"})+".":"Akses paket diberikan tanpa tanggal akhir.";
+    $("#planDescription").textContent="Batas "+billing.siteLimit+" website. "+endText+(billing.planSource==="admin"?" Paket ini diatur admin.":"");
+    select.hidden=true;
     upgrade.hidden=true;
-    cancel.hidden=sub?.status==="cancelled";
+    cancel.hidden=!sub?.canCancel;
+    return;
+  }
+  if(billing.planSource==="admin"){
+    $("#planTitle").textContent="Paket Gratis diatur admin";
+    $("#planDescription").textContent="Admin sedang mengatur paket akunmu. Hubungi admin untuk mengubahnya.";
+    select.hidden=true;upgrade.hidden=true;cancel.hidden=true;
     return;
   }
   if(sub?.status==="active"||sub?.status==="past_due"){
     $("#planTitle").textContent=sub.status==="past_due"?"Pembayaran perlu diperbarui":"Pembayaran menunggu konfirmasi";
-    $("#planDescription").textContent=sub.status==="past_due"?"Akses Pro belum aktif atau pembayaran berikutnya tertunda. Batalkan langganan yang sedang berjalan sebelum mencoba checkout baru.":sub.currentPeriodEnd?"Xendit sedang memproses perpanjangan. Kuota Pro aktif lagi setelah pembayaran berhasil.":"Xendit sedang mengonfirmasi pembayaran pertama. Kuota Pro dibuka setelah pembayaran berhasil.";
-    upgrade.hidden=true;
-    cancel.hidden=!sub.canCancel;
+    $("#planDescription").textContent=sub.status==="past_due"?"Akses paket belum aktif atau pembayaran berikutnya tertunda. Batalkan langganan yang berjalan sebelum checkout lagi.":sub.currentPeriodEnd?"Xendit sedang memproses perpanjangan. Paket aktif lagi setelah pembayaran berhasil.":"Xendit sedang mengonfirmasi pembayaran pertama. Paket aktif setelah pembayaran berhasil.";
+    select.hidden=true;upgrade.hidden=true;cancel.hidden=!sub.canCancel;
     return;
   }
   if(sub?.status==="pending"){
-    $("#planTitle").textContent="Checkout Pro belum selesai";
-    $("#planDescription").textContent="Selesaikan pembayaran di halaman Xendit untuk membuka batas 10 website.";
-    upgrade.textContent=sub.checkoutUrl?"Lanjutkan checkout":"Coba checkout lagi";
-    cancel.hidden=!sub.canCancel;
-  }else{
-    $("#planTitle").textContent="Paket Gratis";
-    const price=priceLabel(billing.price,billing.currency,billing.country);
-    $("#planDescription").textContent="Gratis sampai 2 website. Pro membuka batas 10 website"+(price?" dengan biaya "+price+" per bulan.":".");
-    upgrade.textContent=billing.checkoutEnabled&&price?"Upgrade Pro · "+price+"/bln":"Pro belum diaktifkan";
+    $("#planTitle").textContent="Checkout "+(sub.planName||"paket")+" belum selesai";
+    $("#planDescription").textContent="Lanjutkan pembayaran di halaman Xendit untuk mengaktifkan paket.";
+    select.hidden=true;upgrade.hidden=false;upgrade.textContent=sub.checkoutUrl?"Lanjutkan checkout":"Coba checkout lagi";
+    upgrade.disabled=!sub.checkoutUrl&&!billing.checkoutEnabled;cancel.hidden=!sub.canCancel;
+    return;
   }
+
+  $("#planTitle").textContent="Paket Gratis";
+  const plans=Array.isArray(billing.packages)?billing.packages:[];
+  for(const item of plans){
+    const option=document.createElement("option");
+    option.value=item.code;
+    const price=priceLabel(item.amount,item.currency,item.country);
+    option.textContent=item.name+(item.description?" · "+item.description:"")+" · "+price+"/bln · "+item.siteLimit+" website";
+    select.append(option);
+  }
+  select.hidden=!plans.length;
   upgrade.hidden=false;
-  upgrade.disabled=!billing.checkoutEnabled&&!sub?.checkoutUrl;
-  cancel.hidden=sub?.status==="pending"?!sub.canCancel:true;
+  upgrade.disabled=!billing.checkoutEnabled||!plans.length;
+  cancel.hidden=true;
+  function updateButton(){
+    const item=plans.find(p=>p.code===select.value);
+    upgrade.textContent=item?"Pilih "+item.name+" · "+priceLabel(item.amount,item.currency,item.country)+"/bln":"Paket belum tersedia";
+  }
+  select.onchange=updateButton;
+  updateButton();
+  $("#planDescription").textContent=plans.length?"Gratis sampai 2 website. Pilih paket berbayar untuk menambah batas website.":"Gratis sampai 2 website. Paket berbayar belum diaktifkan admin.";
 }
 async function startCheckout(){
-  if(!billingState?.checkoutEnabled&&!billingState?.subscription?.checkoutUrl){showError("Langganan belum dikonfigurasi admin.");return}
+  if(billingState?.subscription?.checkoutUrl){location.assign(billingState.subscription.checkoutUrl);return}
+  if(!billingState?.checkoutEnabled){showError("Paket berbayar belum diaktifkan admin.");return}
+  const planCode=$("#packageSelect").value;
+  if(!planCode){showError("Pilih paket terlebih dahulu.");return}
   const button=$("#upgradeButton");button.disabled=true;
   try{
-    if(billingState.subscription?.checkoutUrl){location.assign(billingState.subscription.checkoutUrl);return}
-    const response=await fetch("/api/billing/checkout",{method:"POST"}),data=await response.json();
+    const response=await fetch("/api/billing/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({planCode})}),data=await response.json();
     if(!response.ok)throw new Error(data.error||"Checkout gagal dibuat.");
     if(!data.checkoutUrl)throw new Error("Tautan checkout tidak tersedia.");
     location.assign(data.checkoutUrl);
@@ -140,14 +165,14 @@ async function loadSites(){
   if(!billingResponse.ok)throw new Error(billing.error||"Status paket gagal dimuat.");
   renderPlan(billing);
   const limit=Number(data.siteLimit)||2,count=(data.sites||[]).length,create=$("#createSite"),full=count>=limit;
-  $("#siteUsage").textContent=(data.plan==="pro"?"Paket Pro: ":"Paket gratis: ")+count+" / "+limit+" website";
+  $("#siteUsage").textContent=(data.plan!=="free"?(data.packageName||"Paket member")+": ":"Paket gratis: ")+count+" / "+limit+" website";
   create.classList.toggle("disabled",full);create.dataset.limitFull=full?"true":"false";create.setAttribute("aria-disabled",full?"true":"false");
   create.innerHTML=full?(data.plan==="pro"?"Kuota Pro penuh":"Kuota gratis penuh"):"Buat website <span>↗</span>";
   $("#loading").hidden=true;
   if(!data.sites||!data.sites.length){$("#empty").hidden=false;return}
   data.sites.forEach(site=>grid.append(makeCard(site)));grid.hidden=false;
 }
-$("#createSite").addEventListener("click",event=>{if($("#createSite").dataset.limitFull==="true"){event.preventDefault();showError(billingState?.plan==="pro"?"Batas 10 website Pro sudah tercapai.":"Batas gratis tercapai. Upgrade Pro untuk menyimpan sampai 10 website.")}});
+$("#createSite").addEventListener("click",event=>{if($("#createSite").dataset.limitFull==="true"){event.preventDefault();showError(billingState?.plan!=="free"?"Batas "+billingState.siteLimit+" website untuk paket ini sudah tercapai.":"Batas gratis tercapai. Pilih paket berbayar untuk menambah kuota.")}});
 $("#upgradeButton").addEventListener("click",startCheckout);
 $("#cancelButton").addEventListener("click",cancelSubscription);
 $("#logout").addEventListener("click",async()=>{try{await fetch("/api/auth/logout",{method:"POST"})}finally{location.replace("/account.html")}});
