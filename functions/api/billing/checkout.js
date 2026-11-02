@@ -6,7 +6,8 @@ function cleanName(value) {
 
 function nextMonthAnchor() {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0)).toISOString();
+  const day = Math.min(now.getUTCDate(), 28);
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, day, now.getUTCHours(), now.getUTCMinutes())).toISOString();
 }
 
 export async function onRequestPost({ request, env }) {
@@ -43,9 +44,11 @@ export async function onRequestPost({ request, env }) {
 
     const rowId = crypto.randomUUID();
     const referenceId = "sfpro" + crypto.randomUUID().replace(/-/g, "");
+    const anchorDate = nextMonthAnchor();
+    const firstRenewalAt = Date.parse(anchorDate);
     await env.DB.prepare(
-      "INSERT INTO member_subscriptions (id,member_id,provider,provider_reference_id,plan_code,status,amount,currency,created_at,updated_at) VALUES (?,?, 'xendit', ?, 'pro_monthly', 'pending', ?, ?, ?, ?)"
-    ).bind(rowId, member.id, referenceId, config.amount, config.currency, now, now).run();
+      "INSERT INTO member_subscriptions (id,member_id,provider,provider_reference_id,plan_code,status,amount,currency,first_renewal_at,created_at,updated_at) VALUES (?,?, 'xendit', ?, 'pro_monthly', 'pending', ?, ?, ?, ?, ?)"
+    ).bind(rowId, member.id, referenceId, config.amount, config.currency, firstRenewalAt, now, now).run();
 
     if (String(member.email || "").length > 50) {
       await env.DB.prepare("UPDATE member_subscriptions SET status='failed',updated_at=? WHERE id=?").bind(Date.now(), rowId).run();
@@ -72,7 +75,7 @@ export async function onRequestPost({ request, env }) {
         schedule: {
           interval: "MONTH",
           interval_count: 1,
-          anchor_date: nextMonthAnchor(),
+          anchor_date: anchorDate,
           retry_interval: "DAY",
           retry_interval_count: 1,
           total_retry: 3,
