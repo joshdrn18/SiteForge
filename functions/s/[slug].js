@@ -1,9 +1,10 @@
 const enc=new TextEncoder();
 function esc(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function lines(value){return esc(value).replace(/\r?\n/g,"<br>")}
-function imageUrl(value){
+function imageUrl(value,requestUrl){
   const source=String(value||"").trim();
   if(/^data:image\/(?:png|jpeg|webp|gif|x-icon|vnd\.microsoft\.icon|svg\+xml);base64,[A-Za-z0-9+/=]+$/i.test(source))return source;
+  if(/^\/media\/[A-Za-z0-9_-]{1,64}\/[0-9a-f-]{36}\.(?:png|jpg|webp|gif)$/i.test(source))return new URL(source,requestUrl).href;
   try{const url=new URL(source);return ["https:","http:"].includes(url.protocol)?url.href:""}catch{return ""}
 }
 function notFound(){return new Response("<!doctype html><html lang='id'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Website tidak ditemukan</title><body style='font:16px system-ui;padding:10vh 8%;color:#20211f;background:#f6f5f1'><h1>Website tidak ditemukan</h1><p>Alamat ini belum diterbitkan atau sudah dihapus.</p><a href='/'>Kembali ke SiteForge</a></body></html>",{status:404,headers:{"Content-Type":"text/html;charset=utf-8","Cache-Control":"no-store"}})}
@@ -21,7 +22,7 @@ export async function onRequestGet({request,env,params}){
     const name=String(c.business||site.name),title=String(c.seoTitle||name),description=String(c.metaDescription||copy.description||c.description||"");
     const hero=String(copy.title||name),tag=String(copy.tag||c.type||"");
     const heroText=String(copy.description||c.description||"");
-    const art=imageUrl(c.heroImage),favicon=imageUrl(c.favicon),share=imageUrl(c.ogImage||c.heroImage);
+    const art=imageUrl(c.heroImage,request.url),favicon=imageUrl(c.favicon,request.url),share=imageUrl(c.ogImage||c.heroImage,request.url);
     const links=Array.isArray(copy.links)?copy.links:[];
     const navLinks=links.map(label=>'<a href="#features">'+esc(label)+'</a>').join("");
     const features=Array.isArray(copy.features)?copy.features:[];
