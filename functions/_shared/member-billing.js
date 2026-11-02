@@ -27,11 +27,12 @@ export function billingConfig(env) {
   const currency = String(env.BILLING_CURRENCY || "IDR").trim().toUpperCase();
   const amount = Number(env.PRO_MONTHLY_AMOUNT);
   const supported = (country === "ID" && currency === "IDR") || (country === "MY" && currency === "MYR");
+  const validAmount = Number.isFinite(amount) && amount > 0 && (currency === "IDR" ? Number.isInteger(amount) : Math.round(amount * 100) === amount * 100);
   return {
     country,
     currency,
-    amount: Number.isFinite(amount) && amount > 0 ? amount : null,
-    configured: !!env.XENDIT_SECRET_KEY && !!env.XENDIT_WEBHOOK_TOKEN && supported && Number.isFinite(amount) && amount > 0
+    amount: validAmount ? amount : null,
+    configured: !!env.XENDIT_SECRET_KEY && !!env.XENDIT_WEBHOOK_TOKEN && supported && validAmount
   };
 }
 
