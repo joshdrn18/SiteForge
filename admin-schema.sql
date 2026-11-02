@@ -44,3 +44,37 @@ CREATE TABLE IF NOT EXISTS ip_rate_limits (
  PRIMARY KEY(action,ip_hash)
 );
 CREATE INDEX IF NOT EXISTS idx_ip_rate_limits_window ON ip_rate_limits(window_start);
+
+
+CREATE TABLE IF NOT EXISTS member_subscriptions (
+ id TEXT PRIMARY KEY,
+ member_id TEXT NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+ provider TEXT NOT NULL DEFAULT 'xendit',
+ provider_reference_id TEXT NOT NULL UNIQUE,
+ provider_session_id TEXT,
+ provider_plan_id TEXT,
+ checkout_url TEXT,
+ checkout_expires_at INTEGER,
+ plan_code TEXT NOT NULL DEFAULT 'pro_monthly',
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','past_due','cancelled','failed','expired')),
+ amount REAL NOT NULL,
+ currency TEXT NOT NULL,
+ first_renewal_at INTEGER,
+ current_period_end INTEGER,
+ provider_updated_at INTEGER NOT NULL DEFAULT 0,
+ last_cycle_number INTEGER NOT NULL DEFAULT 0,
+ last_cycle_status TEXT,
+ created_at INTEGER NOT NULL,
+ updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_member_subscriptions_member_status ON member_subscriptions(member_id,status,updated_at);
+CREATE INDEX IF NOT EXISTS idx_member_subscriptions_period_end ON member_subscriptions(current_period_end);
+
+CREATE TABLE IF NOT EXISTS member_subscription_cycles (
+ cycle_id TEXT PRIMARY KEY,
+ provider_reference_id TEXT NOT NULL REFERENCES member_subscriptions(provider_reference_id) ON DELETE CASCADE,
+ cycle_number INTEGER NOT NULL DEFAULT 0,
+ status TEXT NOT NULL,
+ updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_member_subscription_cycles_reference ON member_subscription_cycles(provider_reference_id,cycle_number);

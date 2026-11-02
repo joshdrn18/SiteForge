@@ -1,15 +1,8 @@
+import { FREE_SITE_LIMIT, PRO_SITE_LIMIT, getMember, getMemberPlan, sameOrigin } from "../_shared/member-billing.js";
 const enc=new TextEncoder();
 const reserved=new Set(["account","admin","api","builder","dashboard","siteforge","assets","favicon"]);
-const FREE_SITE_LIMIT=2;
 
 function b64(bytes){let s="";for(const b of new Uint8Array(bytes))s+=String.fromCharCode(b);return btoa(s).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_")}
-async function memberId(request,env){
-  const token=(request.headers.get("Cookie")||"").split(";").map(v=>v.trim()).find(v=>v.startsWith("sf_member="))?.slice(10);
-  if(!token||!env.DB)return null;
-  const row=await env.DB.prepare("SELECT member_id FROM member_sessions WHERE token_hash=? AND expires_at>?").bind(b64(await crypto.subtle.digest("SHA-256",enc.encode(token))),Date.now()).first();
-  return row?.member_id||null;
-}
-function sameOrigin(request){const origin=request.headers.get("Origin");return !origin||origin===new URL(request.url).origin}
 async function consumeIpLimit(env,request,action,limit){
   const ip=(request.headers.get("CF-Connecting-IP")||"").trim();
   if(!ip)return {allowed:true,attempts:0};
@@ -37,38 +30,43 @@ function slugConflict(error){return String(error?.message||error).includes("UNIQ
 export async function onRequestGet({request,env}){
   try{
     if(!env.DB)return Response.json({error:"Database belum dikonfigurasi."},{status:503});
-    const ownerId=await memberId(request,env);
-    if(!ownerId)return Response.json({error:"Sesi login tidak berlaku."},{status:401});
-    const result=await env.DB.prepare("SELECT id,name,slug,status,created_at,updated_at FROM sites WHERE owner_id=? ORDER BY updated_at DESC").bind(ownerId).all();
-    return Response.json({sites:result.results||[],plan:"free",siteLimit:FREE_SITE_LIMIT});
-  }catch(error){console.error("[member-sites:list]",error);return Response.json({error:"Gagal memuat website."},{status:500})}
+    const member=await getMember(request,env);
+    if(!member)return Response.json({error:"Sesi login tidak berlaku."},{status:401});
+    const plan=await getMemberPlan(env,member.id);
+    const result=await env.DB.prepare("SELECT id,name,slug,status,created_at,updated_at FROM sites WHERE owner_id=? ORDER BY updated_at DESC").bind(member.id).all();
+    return Response.json({sites:result.results||[],...plan});
+  }catch(error){console.error("[member-sites:list]",error);if(String(error?.message||error).includes("no such table: member_subscriptions"))return Response.json({error:"Langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});return Response.json({error:"Gagal memuat website."},{status:500})}
 }
 export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return Response.json({error:"Origin tidak valid."},{status:403});
   try{
     if(!env.DB)return Response.json({error:"Database belum dikonfigurasi."},{status:503});
-    const ownerId=await memberId(request,env);
-    if(!ownerId)return Response.json({error:"Sesi login tidak berlaku."},{status:401});
+    const member=await getMember(request,env);
+    if(!member)return Response.json({error:"Sesi login tidak berlaku."},{status:401});
+    const ownerId=member.id;
+    const plan=await getMemberPlan(env,ownerId);
     const body=await readJson(request);
     if(!body)return Response.json({error:"Data website tidak valid."},{status:400});
     const site=inputData(body);
     if(site.error)return Response.json({error:site.error},{status:400});
     const currentUsage=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=?").bind(ownerId).first();
-    if(Number(currentUsage?.count||0)>=FREE_SITE_LIMIT)return Response.json({error:"Paket gratis hanya boleh menyimpan maksimal 2 website. Hapus website lama untuk membuat yang baru.",code:"FREE_SITE_LIMIT",plan:"free",siteCount:Number(currentUsage?.count||0),siteLimit:FREE_SITE_LIMIT},{status:409});
+    if(Number(currentUsage?.count||0)>=plan.siteLimit)return Response.json({error:plan.plan==="pro"?"Kuota Pro sudah penuh.":"Paket gratis hanya boleh menyimpan maksimal 2 website. Upgrade Pro untuk membuat lebih banyak.",code:plan.plan==="pro"?"PRO_SITE_LIMIT":"FREE_SITE_LIMIT",plan:plan.plan,siteCount:Number(currentUsage?.count||0),siteLimit:plan.siteLimit},{status:409});
     const createLimit=await consumeIpLimit(env,request,"site-create",10);
     if(!createLimit.allowed)return Response.json({error:"Terlalu banyak website baru dari jaringan ini hari ini. Coba lagi besok."},{status:429});
     const id=crypto.randomUUID(),now=Date.now();
     const result=await env.DB.batch([
-      env.DB.prepare("INSERT INTO sites (id,owner_id,name,slug,status,created_at,updated_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM sites WHERE owner_id=?) < ?").bind(id,ownerId,site.name,site.slug,"draft",now,now,ownerId,FREE_SITE_LIMIT),
+      env.DB.prepare("INSERT INTO sites (id,owner_id,name,slug,status,created_at,updated_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM sites WHERE owner_id=?) < CASE WHEN EXISTS (SELECT 1 FROM member_subscriptions WHERE member_id=? AND current_period_end>?) THEN ? ELSE ? END").bind(id,ownerId,site.name,site.slug,"draft",now,now,ownerId,ownerId,now,PRO_SITE_LIMIT,FREE_SITE_LIMIT),
       env.DB.prepare("INSERT INTO site_content (site_id,content_json,updated_at) SELECT ?,?,? WHERE EXISTS (SELECT 1 FROM sites WHERE id=? AND owner_id=?)").bind(id,site.contentJson,now,id,ownerId)
     ]);
-    if(!result[0]?.meta?.changes){const usage=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=?").bind(ownerId).first();return Response.json({error:"Paket gratis hanya boleh menyimpan maksimal 2 website. Hapus website lama untuk membuat yang baru.",code:"FREE_SITE_LIMIT",plan:"free",siteCount:Number(usage?.count||0),siteLimit:FREE_SITE_LIMIT},{status:409})}
+    if(!result[0]?.meta?.changes){const usage=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=?").bind(ownerId).first();const currentPlan=await getMemberPlan(env,ownerId);return Response.json({error:currentPlan.plan==="pro"?"Kuota Pro sudah penuh.":"Paket gratis hanya boleh menyimpan maksimal 2 website. Upgrade Pro untuk membuat lebih banyak.",code:currentPlan.plan==="pro"?"PRO_SITE_LIMIT":"FREE_SITE_LIMIT",plan:currentPlan.plan,siteCount:Number(usage?.count||0),siteLimit:currentPlan.siteLimit},{status:409})}
     const finalUsage=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=?").bind(ownerId).first();
-    return Response.json({site:{id,name:site.name,slug:site.slug,status:"draft",created_at:now,updated_at:now},plan:"free",siteCount:Number(finalUsage?.count||0),siteLimit:FREE_SITE_LIMIT},{status:201});
+    const currentPlan=await getMemberPlan(env,ownerId);
+    return Response.json({site:{id,name:site.name,slug:site.slug,status:"draft",created_at:now,updated_at:now},...currentPlan,siteCount:Number(finalUsage?.count||0)},{status:201});
   }catch(error){
     console.error("[member-sites:create]",error);
     if(slugConflict(error))return Response.json({error:"Slug ini sudah dipakai. Coba alamat lain."},{status:409});
     const message=String(error?.message||error);
+    if(message.includes("no such table: member_subscriptions"))return Response.json({error:"Langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     if(message.includes("no such table: ip_rate_limits"))return Response.json({error:"Batas pembuatan website belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     if(message.includes("no such table: site_content"))return Response.json({error:"Penyimpanan draft belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     return Response.json({error:"Gagal menyimpan draft website."},{status:500});
