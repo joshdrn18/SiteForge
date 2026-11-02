@@ -8,7 +8,7 @@ In the Cloudflare Dashboard, create a D1 database. In the SiteForge Pages projec
 
 ## 2. Set up image storage in R2
 
-Create an R2 bucket in Cloudflare (for example, `siteforge-media`). In the Pages project, open **Settings > Bindings > Add > R2 bucket**, enter **MEDIA** for Variable name, select the bucket, save, then redeploy. Add the binding for Production. Add it to Preview only if you use preview deployments. Keep the bucket private and leave its public `r2.dev` URL disabled. Pages Functions serve assets only to their signed-in owner or when a published SiteForge website references them.
+The current production Pages project already has a private R2 bucket named `siteforge-media` attached as binding `MEDIA`. If you set up SiteForge in another Cloudflare account, create an R2 bucket and open **Settings > Bindings > Add > R2 bucket**, enter **MEDIA** for Variable name, select the bucket, save, and redeploy. Add the binding for Production; add it to Preview only if you use preview deployments. Keep the bucket private and leave its public `r2.dev` URL disabled. Pages Functions serve assets only to their signed-in owner or when a published SiteForge website references them.
 
 The builder accepts PNG, JPEG, WebP, and GIF files up to 2 MB each. Each member can store up to 25 files or 20 MB. Replaced and deleted website images are cleaned up after saving. This setup does not require a D1 migration.
 
