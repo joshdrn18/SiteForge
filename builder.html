@@ -139,12 +139,20 @@
     }
     async function loadDraft(){
       if(!editingSiteId)return;
-      const response=await fetch('/api/sites/'+encodeURIComponent(editingSiteId));
-      const data=await response.json().catch(()=>({}));
-      if(response.status===401){location.replace('/account.html?next='+encodeURIComponent(location.pathname+location.search));return}
-      if(!response.ok){toast(data.error||'Draft tidak bisa dibuka.');return}
-      applyDraft(data.site);
-      $('#saveDraft').textContent='▣  Perbarui';
+      const button=$('#saveDraft');
+      button.disabled=true;button.textContent='Memuat…';
+      try{
+        const response=await fetch('/api/sites/'+encodeURIComponent(editingSiteId));
+        const data=await response.json().catch(()=>({}));
+        if(response.status===401){location.replace('/account.html?next='+encodeURIComponent(location.pathname+location.search));return}
+        if(!response.ok)throw new Error(data.error||'Draft tidak bisa dibuka.');
+        applyDraft(data.site);
+        button.textContent='▣  Perbarui';
+      }catch(error){
+        editingSiteId=null;
+        history.replaceState(null,'','/builder.html');
+        toast(error.message||'Draft tidak bisa dibuka.');
+      }finally{button.disabled=false}
     }
     async function saveDraft(){
       const button=$('#saveDraft'),oldLabel=button.textContent;
