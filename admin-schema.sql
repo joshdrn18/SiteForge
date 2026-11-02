@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS member_subscriptions (
  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','active','past_due','cancelled','failed','expired')),
  amount REAL NOT NULL,
  currency TEXT NOT NULL,
+ first_renewal_at INTEGER,
  current_period_end INTEGER,
  provider_updated_at INTEGER NOT NULL DEFAULT 0,
  last_cycle_number INTEGER NOT NULL DEFAULT 0,
