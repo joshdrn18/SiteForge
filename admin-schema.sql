@@ -78,3 +78,36 @@ CREATE TABLE IF NOT EXISTS member_subscription_cycles (
  updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_member_subscription_cycles_reference ON member_subscription_cycles(provider_reference_id,cycle_number);
+
+
+CREATE TABLE IF NOT EXISTS subscription_plans (
+ code TEXT PRIMARY KEY,
+ name TEXT NOT NULL,
+ description TEXT NOT NULL DEFAULT '',
+ amount REAL NOT NULL DEFAULT 0,
+ currency TEXT NOT NULL DEFAULT 'IDR',
+ country TEXT NOT NULL DEFAULT 'ID',
+ billing_interval TEXT NOT NULL DEFAULT 'MONTH' CHECK(billing_interval IN ('FREE','MONTH')),
+ site_limit INTEGER NOT NULL DEFAULT 2 CHECK(site_limit BETWEEN 1 AND 100),
+ is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0,1)),
+ sort_order INTEGER NOT NULL DEFAULT 0,
+ created_at INTEGER NOT NULL DEFAULT 0,
+ updated_at INTEGER NOT NULL DEFAULT 0,
+ CHECK((country='ID' AND currency='IDR') OR (country='MY' AND currency='MYR'))
+);
+INSERT OR IGNORE INTO subscription_plans
+(code,name,description,amount,currency,country,billing_interval,site_limit,is_active,sort_order,created_at,updated_at)
+VALUES ('free','Gratis','Paket gratis SiteForge',0,'IDR','ID','FREE',2,1,0,0,0);
+INSERT OR IGNORE INTO subscription_plans
+(code,name,description,amount,currency,country,billing_interval,site_limit,is_active,sort_order,created_at,updated_at)
+VALUES ('pro_monthly','Pro Bulanan','Paket berbayar bulanan SiteForge',0,'IDR','ID','MONTH',10,0,10,0,0);
+
+CREATE TABLE IF NOT EXISTS member_plan_assignments (
+ member_id TEXT PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
+ plan_code TEXT NOT NULL REFERENCES subscription_plans(code),
+ ends_at INTEGER,
+ reason TEXT,
+ assigned_by TEXT NOT NULL,
+ updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_member_plan_assignments_expiry ON member_plan_assignments(ends_at);

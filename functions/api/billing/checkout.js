@@ -10,6 +10,14 @@ function nextMonthAnchor() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, day, now.getUTCHours(), now.getUTCMinutes())).toISOString();
 }
 
+function supportedPlan(plan) {
+  const currency = String(plan?.currency || "").toUpperCase();
+  const country = String(plan?.country || "").toUpperCase();
+  const amount = Number(plan?.amount);
+  const validAmount = Number.isFinite(amount) && amount > 0 && (currency === "IDR" ? Number.isInteger(amount) : Math.round(amount * 100) === amount * 100);
+  return validAmount && ((country === "ID" && currency === "IDR") || (country === "MY" && currency === "MYR"));
+}
+
 export async function onRequestPost({ request, env }) {
   if (!sameOrigin(request)) return Response.json({ error: "Origin tidak valid." }, { status: 403 });
   if (!env.DB) return Response.json({ error: "Database member belum dikonfigurasi." }, { status: 503 });
@@ -17,27 +25,46 @@ export async function onRequestPost({ request, env }) {
     const member = await getMember(request, env);
     if (!member) return Response.json({ error: "Sesi login tidak berlaku." }, { status: 401 });
 
+    let body;
+    try { body = await request.json(); } catch { return Response.json({ error: "Paket checkout tidak valid." }, { status: 400 }); }
+    const planCode = String(body?.planCode || "").trim().toLowerCase();
+    if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(planCode)) return Response.json({ error: "Pilih paket yang tersedia." }, { status: 400 });
+
     const config = billingConfig(env);
     if (!config.configured) {
-      return Response.json({ error: "Langganan Pro belum dikonfigurasi. Hubungi admin SiteForge.", code: "BILLING_NOT_CONFIGURED" }, { status: 503 });
+      return Response.json({ error: "Pembayaran belum dikonfigurasi admin SiteForge.", code: "BILLING_NOT_CONFIGURED" }, { status: 503 });
+    }
+
+    const selectedPlan = await env.DB.prepare(
+      "SELECT code,name,description,amount,currency,country,billing_interval,site_limit FROM subscription_plans WHERE code=? AND is_active=1 AND billing_interval='MONTH'"
+    ).bind(planCode).first();
+    if (!selectedPlan || !supportedPlan(selectedPlan)) {
+      return Response.json({ error: "Paket ini belum tersedia untuk checkout." }, { status: 404 });
     }
 
     const plan = await getMemberPlan(env, member.id);
-    if (plan.plan === "pro") {
-      return Response.json({ error: "Paket Pro kamu masih aktif.", code: "ALREADY_PRO", subscription: plan.subscription }, { status: 409 });
+    if (plan.planSource === "admin") {
+      return Response.json({ error: "Paket akunmu sedang diatur admin. Hubungi admin untuk mengubahnya.", code: "ADMIN_ASSIGNED_PLAN" }, { status: 409 });
+    }
+    if (plan.plan !== "free") {
+      return Response.json({ error: "Paket berbayar kamu masih aktif.", code: "ALREADY_SUBSCRIBED", subscription: plan.subscription }, { status: 409 });
     }
 
     const now = Date.now();
     const unresolved = await env.DB.prepare(
-      "SELECT status,current_period_end FROM member_subscriptions WHERE member_id=? AND provider_plan_id IS NOT NULL AND status IN ('active','past_due') ORDER BY updated_at DESC LIMIT 1"
+      "SELECT status,plan_code FROM member_subscriptions WHERE member_id=? AND provider_plan_id IS NOT NULL AND status IN ('active','past_due') ORDER BY updated_at DESC LIMIT 1"
     ).bind(member.id).first();
     if (unresolved) {
       return Response.json({ error: "Langganan sebelumnya masih diproses. Batalkan dulu dari dashboard sebelum membuat checkout baru.", code: "SUBSCRIPTION_PENDING" }, { status: 409 });
     }
+
     const pending = await env.DB.prepare(
-      "SELECT checkout_url,checkout_expires_at FROM member_subscriptions WHERE member_id=? AND status='pending' AND checkout_url IS NOT NULL AND checkout_expires_at>? ORDER BY created_at DESC LIMIT 1"
+      "SELECT checkout_url,checkout_expires_at,plan_code FROM member_subscriptions WHERE member_id=? AND status='pending' AND checkout_url IS NOT NULL AND checkout_expires_at>? ORDER BY created_at DESC LIMIT 1"
     ).bind(member.id, now).first();
-    if (pending?.checkout_url) return Response.json({ checkoutUrl: pending.checkout_url, reused: true });
+    if (pending?.checkout_url) {
+      if (pending.plan_code === selectedPlan.code) return Response.json({ checkoutUrl: pending.checkout_url, reused: true });
+      return Response.json({ error: "Checkout paket sebelumnya masih aktif. Selesaikan atau batalkan dulu dari dashboard.", code: "CHECKOUT_PENDING" }, { status: 409 });
+    }
 
     await env.DB.prepare("UPDATE member_subscriptions SET status='expired',updated_at=? WHERE member_id=? AND status='pending' AND checkout_expires_at IS NOT NULL AND checkout_expires_at<=?")
       .bind(now, member.id, now).run();
@@ -47,8 +74,8 @@ export async function onRequestPost({ request, env }) {
     const anchorDate = nextMonthAnchor();
     const firstRenewalAt = Date.parse(anchorDate);
     await env.DB.prepare(
-      "INSERT INTO member_subscriptions (id,member_id,provider,provider_reference_id,plan_code,status,amount,currency,first_renewal_at,created_at,updated_at) VALUES (?,?, 'xendit', ?, 'pro_monthly', 'pending', ?, ?, ?, ?, ?)"
-    ).bind(rowId, member.id, referenceId, config.amount, config.currency, firstRenewalAt, now, now).run();
+      "INSERT INTO member_subscriptions (id,member_id,provider,provider_reference_id,plan_code,status,amount,currency,first_renewal_at,created_at,updated_at) VALUES (?,?, 'xendit', ?, ?, 'pending', ?, ?, ?, ?, ?)"
+    ).bind(rowId, member.id, referenceId, selectedPlan.code, selectedPlan.amount, selectedPlan.currency, firstRenewalAt, now, now).run();
 
     if (String(member.email || "").length > 50) {
       await env.DB.prepare("UPDATE member_subscriptions SET status='failed',updated_at=? WHERE id=?").bind(Date.now(), rowId).run();
@@ -60,9 +87,9 @@ export async function onRequestPost({ request, env }) {
       reference_id: referenceId,
       session_type: "SUBSCRIPTION",
       mode: "PAYMENT_LINK",
-      amount: config.amount,
-      currency: config.currency,
-      country: config.country,
+      amount: Number(selectedPlan.amount),
+      currency: selectedPlan.currency,
+      country: selectedPlan.country,
       locale: "id",
       customer: {
         reference_id: "sfmember" + crypto.randomUUID().replace(/-/g, ""),
@@ -70,7 +97,7 @@ export async function onRequestPost({ request, env }) {
         email: String(member.email || "").slice(0, 50),
         individual_detail: { given_names: firstName }
       },
-      description: "SiteForge Pro — langganan bulanan",
+      description: "SiteForge — " + String(selectedPlan.name || "Paket").slice(0, 80),
       subscription: {
         schedule: {
           interval: "MONTH",
@@ -119,8 +146,8 @@ export async function onRequestPost({ request, env }) {
   } catch (error) {
     console.error("[billing:checkout]", error);
     const message = String(error?.message || error);
-    if (message.includes("no such table: member_subscriptions")) {
-      return Response.json({ error: "Langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1." }, { status: 503 });
+    if (["member_subscriptions", "subscription_plans", "member_plan_assignments"].some(table => message.includes("no such table: " + table))) {
+      return Response.json({ error: "Paket/langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1." }, { status: 503 });
     }
     return Response.json({ error: "Checkout gagal dibuat." }, { status: 500 });
   }

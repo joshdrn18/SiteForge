@@ -1,4 +1,4 @@
-import { FREE_SITE_LIMIT, PRO_SITE_LIMIT, getMemberPlan } from "../../_shared/member-billing.js";
+import { SITE_LIMIT_SQL, getMemberPlan } from "../../_shared/member-billing.js";
 const enc=new TextEncoder();
 const reserved=new Set(["account","admin","api","builder","dashboard","siteforge","assets","favicon"]);
 
@@ -104,14 +104,14 @@ export async function onRequestPost({request,env,params}){
     let publishLimit;try{publishLimit=await consumePublishLimit(env,request)}catch(error){if(String(error?.message||error).includes("no such table: ip_rate_limits"))return Response.json({error:"Proteksi publikasi belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});throw error}
     if(!publishLimit.allowed)return Response.json({error:"Terlalu banyak website diterbitkan dari jaringan ini hari ini. Coba lagi besok."},{status:429});
     const now=Date.now();
-    const updated=await env.DB.prepare("UPDATE sites SET status='published',updated_at=? WHERE id=? AND owner_id=? AND (status='published' OR (SELECT COUNT(*) FROM sites WHERE owner_id=? AND status='published') < CASE WHEN EXISTS (SELECT 1 FROM member_subscriptions WHERE member_id=? AND current_period_end>?) THEN ? ELSE ? END)").bind(now,params.id,ownerId,ownerId,ownerId,now,PRO_SITE_LIMIT,FREE_SITE_LIMIT).run();
+    const updated=await env.DB.prepare("UPDATE sites SET status='published',updated_at=? WHERE id=? AND owner_id=? AND (status='published' OR (SELECT COUNT(*) FROM sites WHERE owner_id=? AND status='published') < ("+SITE_LIMIT_SQL+"))").bind(now,params.id,ownerId,ownerId,ownerId,now,ownerId,now).run();
     if(!updated.meta?.changes){
       const current=await env.DB.prepare("SELECT status FROM sites WHERE id=? AND owner_id=?").bind(params.id,ownerId).first();
       if(!current)return Response.json({error:"Website tidak ditemukan."},{status:404});
       if(current.status!=="published"){
         const currentPlan=await getMemberPlan(env,ownerId);
         const count=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=? AND status='published'").bind(ownerId).first();
-        return Response.json({error:currentPlan.plan==="pro"?"Batas Pro sudah mencapai 10 website terbit.":"Paket gratis maksimal 2 website terbit. Hapus website lain atau upgrade Pro.",code:"PUBLISH_SITE_LIMIT",plan:currentPlan.plan,siteCount:Number(count?.count||0),siteLimit:currentPlan.siteLimit},{status:409});
+        return Response.json({error:"Paket "+(currentPlan.packageName||"member")+" sudah mencapai batas "+currentPlan.siteLimit+" website terbit. Ubah paket atau nonaktifkan website lain.",code:"PUBLISH_SITE_LIMIT",plan:currentPlan.plan,siteCount:Number(count?.count||0),siteLimit:currentPlan.siteLimit},{status:409});
       }
     }
     const url=new URL("/s/"+encodeURIComponent(site.slug),request.url).href;
@@ -119,7 +119,7 @@ export async function onRequestPost({request,env,params}){
   }catch(error){
     console.error("[member-sites:publish]",error);
     const message=String(error?.message||error);
-    if(message.includes("no such table: member_subscriptions"))return Response.json({error:"Langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
+    if(["member_subscriptions","subscription_plans","member_plan_assignments"].some(table=>message.includes("no such table: "+table)))return Response.json({error:"Paket member belum disiapkan. Jalankan ulang admin-schema.sql versi terbaru di D1."},{status:503});
     if(message.includes("no such table: ip_rate_limits"))return Response.json({error:"Proteksi publikasi belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     if(message.includes("no such table: site_content"))return Response.json({error:"Penyimpanan draft belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     return Response.json({error:"Gagal menerbitkan website."},{status:500});
