@@ -6,7 +6,13 @@ SiteForge member accounts, saved websites, package limits, and admin controls ru
 
 In the Cloudflare Dashboard, create a D1 database. In the SiteForge Pages project, add a D1 binding named `DB` and select that database. Pages Functions read the binding through `env.DB`.
 
-## 2. Apply the database schema
+## 2. Set up image storage in R2
+
+The current production Pages project already has a private R2 bucket named `siteforge-media` attached as binding `MEDIA`. If you set up SiteForge in another Cloudflare account, create an R2 bucket and open **Settings > Bindings > Add > R2 bucket**, enter **MEDIA** for Variable name, select the bucket, save, and redeploy. Add the binding for Production; add it to Preview only if you use preview deployments. Keep the bucket private and leave its public `r2.dev` URL disabled. Pages Functions serve assets only to their signed-in owner or when a published SiteForge website references them.
+
+The builder accepts PNG, JPEG, WebP, and GIF files up to 2 MB each. Each member can store up to 25 files or 20 MB. Replaced and deleted website images are cleaned up after saving. This setup does not require a D1 migration.
+
+## 3. Apply the database schema
 
 Run both `schema.sql` and `admin-schema.sql` against the same D1 database in the D1 console or with Wrangler:
 
@@ -17,7 +23,7 @@ npx wrangler d1 execute YOUR_DATABASE_NAME --remote --file=admin-schema.sql
 
 After a SiteForge update that changes `admin-schema.sql`, run the latest file again. Its statements are safe to rerun; this creates or updates package catalog support without removing member data.
 
-## 3. Set admin and payment secrets
+## 4. Set admin and payment secrets
 
 For master-admin login, add encrypted Pages secrets:
 
@@ -33,7 +39,7 @@ For monthly checkout, add encrypted Pages secrets `XENDIT_SECRET_KEY` and `XENDI
 
 Enable the recurring plan and cycle events. Copy the endpoint callback token into `XENDIT_WEBHOOK_TOKEN`. Use Xendit test credentials while validating the flow, then switch to live credentials when ready.
 
-## 4. Configure packages in Admin
+## 5. Configure packages in Admin
 
 Deploy SiteForge, run the latest `admin-schema.sql` in D1, then open `/admin.html` and sign in as the master admin. Use **Profil admin** in the panel to edit the master-admin display name, login email, or password; the current password is required. Password changes revoke other admin sessions. In the **Plans** section you can add or edit package names, descriptions, monthly prices, billing country/currency, website limits, display order, and checkout availability.
 
@@ -43,7 +49,7 @@ Members can edit their display name, email, and password from the **Profil** but
 
 Changing a package's name or website limit applies to members on that package. Changing its price applies to future checkouts; it does not change the recurring price already stored by Xendit for existing subscribers. Deactivating a package hides it from new checkouts but does not remove existing member access.
 
-## 5. Deploy and use
+## 6. Deploy and use
 
 Redeploy SiteForge from the repository root. Main routes:
 
@@ -54,7 +60,9 @@ Redeploy SiteForge from the repository root. Main routes:
 - `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, and `/api/profile`.
 - `/api/admin/profile` — master-admin profile update and login credential changes.
 - `/api/sites` and `/api/sites/:id` — member-owned website storage.
-- `/api/billing/status`, `/api/billing/checkout`, `/api/billing/cancel`, and `/api/billing/webhook`.
+- `/api/billing/status`, `/api/billing/history`, `/api/billing/checkout`, `/api/billing/cancel`, and `/api/billing/webhook`.
+- `/api/assets` uploads member images to the private R2 bucket; `/media/<member>/<file>` serves only owner or published-site images.
+- `/api/account/export` downloads account data; `/api/account/delete` removes the account after confirming its password and stopping active Xendit renewals.
 
 Passwords are PBKDF2-hashed server-side. D1 stores password hashes and hashed session tokens. Session cookies are HttpOnly, Secure, and SameSite=Lax.
 

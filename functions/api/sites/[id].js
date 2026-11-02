@@ -1,3 +1,4 @@
+import { cleanupUnusedMedia } from "../../_shared/media.js";
 import { SITE_LIMIT_SQL, getMemberPlan } from "../../_shared/member-billing.js";
 const enc=new TextEncoder();
 const reserved=new Set(["account","admin","api","builder","dashboard","siteforge","assets","favicon"]);
@@ -67,6 +68,7 @@ export async function onRequestPut({request,env,params}){
       env.DB.prepare("UPDATE sites SET name=?,slug=?,updated_at=? WHERE id=? AND owner_id=?").bind(site.name,site.slug,now,params.id,ownerId),
       env.DB.prepare("INSERT INTO site_content (site_id,content_json,updated_at) VALUES (?,?,?) ON CONFLICT(site_id) DO UPDATE SET content_json=excluded.content_json,updated_at=excluded.updated_at").bind(params.id,site.contentJson,now)
     ]);
+    await cleanupUnusedMedia(env,ownerId);
     return Response.json({site:{id:params.id,name:site.name,slug:site.slug,status:existing.status,updated_at:now}});
   }catch(error){
     console.error("[member-sites:update]",error);
@@ -84,6 +86,7 @@ export async function onRequestDelete({request,env,params}){
     if(!ownerId)return Response.json({error:"Sesi login tidak berlaku."},{status:401});
     const result=await env.DB.prepare("DELETE FROM sites WHERE id=? AND owner_id=?").bind(params.id,ownerId).run();
     if(!result.meta?.changes)return Response.json({error:"Website tidak ditemukan."},{status:404});
+    await cleanupUnusedMedia(env,ownerId);
     return Response.json({ok:true});
   }catch(error){console.error("[member-sites:delete]",error);return Response.json({error:"Gagal menghapus website."},{status:500})}
 }
