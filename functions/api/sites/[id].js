@@ -1,3 +1,4 @@
+import { FREE_SITE_LIMIT, PRO_SITE_LIMIT, getMemberPlan } from "../../_shared/member-billing.js";
 const enc=new TextEncoder();
 const reserved=new Set(["account","admin","api","builder","dashboard","siteforge","assets","favicon"]);
 
@@ -97,15 +98,28 @@ export async function onRequestPost({request,env,params}){
     if(!site)return Response.json({error:"Website tidak ditemukan."},{status:404});
     if(site.status==="disabled")return Response.json({error:"Website ini dinonaktifkan admin."},{status:403});
     if(!site.content_json)return Response.json({error:"Simpan draft website sebelum menerbitkannya."},{status:409});
+    const plan=await getMemberPlan(env,ownerId);
+    const published=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=? AND status='published'").bind(ownerId).first();
+    if(site.status!=="published"&&Number(published?.count||0)>=plan.siteLimit)return Response.json({error:plan.plan==="pro"?"Batas Pro sudah mencapai 10 website terbit.":"Paket gratis maksimal 2 website terbit. Hapus website lain atau upgrade Pro.",code:"PUBLISH_SITE_LIMIT",plan:plan.plan,siteCount:Number(published?.count||0),siteLimit:plan.siteLimit},{status:409});
     let publishLimit;try{publishLimit=await consumePublishLimit(env,request)}catch(error){if(String(error?.message||error).includes("no such table: ip_rate_limits"))return Response.json({error:"Proteksi publikasi belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});throw error}
     if(!publishLimit.allowed)return Response.json({error:"Terlalu banyak website diterbitkan dari jaringan ini hari ini. Coba lagi besok."},{status:429});
     const now=Date.now();
-    await env.DB.prepare("UPDATE sites SET status='published',updated_at=? WHERE id=? AND owner_id=?").bind(now,params.id,ownerId).run();
+    const updated=await env.DB.prepare("UPDATE sites SET status='published',updated_at=? WHERE id=? AND owner_id=? AND (status='published' OR (SELECT COUNT(*) FROM sites WHERE owner_id=? AND status='published') < CASE WHEN EXISTS (SELECT 1 FROM member_subscriptions WHERE member_id=? AND current_period_end>?) THEN ? ELSE ? END)").bind(now,params.id,ownerId,ownerId,ownerId,now,PRO_SITE_LIMIT,FREE_SITE_LIMIT).run();
+    if(!updated.meta?.changes){
+      const current=await env.DB.prepare("SELECT status FROM sites WHERE id=? AND owner_id=?").bind(params.id,ownerId).first();
+      if(!current)return Response.json({error:"Website tidak ditemukan."},{status:404});
+      if(current.status!=="published"){
+        const currentPlan=await getMemberPlan(env,ownerId);
+        const count=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=? AND status='published'").bind(ownerId).first();
+        return Response.json({error:currentPlan.plan==="pro"?"Batas Pro sudah mencapai 10 website terbit.":"Paket gratis maksimal 2 website terbit. Hapus website lain atau upgrade Pro.",code:"PUBLISH_SITE_LIMIT",plan:currentPlan.plan,siteCount:Number(count?.count||0),siteLimit:currentPlan.siteLimit},{status:409});
+      }
+    }
     const url=new URL("/s/"+encodeURIComponent(site.slug),request.url).href;
-    return Response.json({site:{id:site.id,name:site.name,slug:site.slug,status:"published",updated_at:now,url}});
+    return Response.json({site:{id:site.id,name:site.name,slug:site.slug,status:"published",updated_at:now,url},plan:plan.plan,siteLimit:plan.siteLimit});
   }catch(error){
     console.error("[member-sites:publish]",error);
     const message=String(error?.message||error);
+    if(message.includes("no such table: member_subscriptions"))return Response.json({error:"Langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     if(message.includes("no such table: ip_rate_limits"))return Response.json({error:"Proteksi publikasi belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     if(message.includes("no such table: site_content"))return Response.json({error:"Penyimpanan draft belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     return Response.json({error:"Gagal menerbitkan website."},{status:500});
