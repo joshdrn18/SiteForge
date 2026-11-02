@@ -1,4 +1,4 @@
-import { FREE_SITE_LIMIT, PRO_SITE_LIMIT, getMember, getMemberPlan, sameOrigin } from "../_shared/member-billing.js";
+import { SITE_LIMIT_SQL, getMember, getMemberPlan, sameOrigin } from "../_shared/member-billing.js";
 const enc=new TextEncoder();
 const reserved=new Set(["account","admin","api","builder","dashboard","siteforge","assets","favicon"]);
 
@@ -35,7 +35,7 @@ export async function onRequestGet({request,env}){
     const plan=await getMemberPlan(env,member.id);
     const result=await env.DB.prepare("SELECT id,name,slug,status,created_at,updated_at FROM sites WHERE owner_id=? ORDER BY updated_at DESC").bind(member.id).all();
     return Response.json({sites:result.results||[],...plan});
-  }catch(error){console.error("[member-sites:list]",error);if(String(error?.message||error).includes("no such table: member_subscriptions"))return Response.json({error:"Langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});return Response.json({error:"Gagal memuat website."},{status:500})}
+  }catch(error){console.error("[member-sites:list]",error);if(["member_subscriptions","subscription_plans","member_plan_assignments"].some(table=>String(error?.message||error).includes("no such table: "+table)))return Response.json({error:"Paket member belum disiapkan. Jalankan ulang admin-schema.sql versi terbaru di D1."},{status:503});return Response.json({error:"Gagal memuat website."},{status:500})}
 }
 export async function onRequestPost({request,env}){
   if(!sameOrigin(request))return Response.json({error:"Origin tidak valid."},{status:403});
@@ -55,10 +55,10 @@ export async function onRequestPost({request,env}){
     if(!createLimit.allowed)return Response.json({error:"Terlalu banyak website baru dari jaringan ini hari ini. Coba lagi besok."},{status:429});
     const id=crypto.randomUUID(),now=Date.now();
     const result=await env.DB.batch([
-      env.DB.prepare("INSERT INTO sites (id,owner_id,name,slug,status,created_at,updated_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM sites WHERE owner_id=?) < CASE WHEN EXISTS (SELECT 1 FROM member_subscriptions WHERE member_id=? AND current_period_end>?) THEN ? ELSE ? END").bind(id,ownerId,site.name,site.slug,"draft",now,now,ownerId,ownerId,now,PRO_SITE_LIMIT,FREE_SITE_LIMIT),
+      env.DB.prepare("INSERT INTO sites (id,owner_id,name,slug,status,created_at,updated_at) SELECT ?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM sites WHERE owner_id=?) < ("+SITE_LIMIT_SQL+")").bind(id,ownerId,site.name,site.slug,"draft",now,now,ownerId,ownerId,now,ownerId,now),
       env.DB.prepare("INSERT INTO site_content (site_id,content_json,updated_at) SELECT ?,?,? WHERE EXISTS (SELECT 1 FROM sites WHERE id=? AND owner_id=?)").bind(id,site.contentJson,now,id,ownerId)
     ]);
-    if(!result[0]?.meta?.changes){const usage=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=?").bind(ownerId).first();const currentPlan=await getMemberPlan(env,ownerId);return Response.json({error:currentPlan.plan==="pro"?"Kuota Pro sudah penuh.":"Paket gratis hanya boleh menyimpan maksimal 2 website. Upgrade Pro untuk membuat lebih banyak.",code:currentPlan.plan==="pro"?"PRO_SITE_LIMIT":"FREE_SITE_LIMIT",plan:currentPlan.plan,siteCount:Number(usage?.count||0),siteLimit:currentPlan.siteLimit},{status:409})}
+    if(!result[0]?.meta?.changes){const usage=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=?").bind(ownerId).first();const currentPlan=await getMemberPlan(env,ownerId);return Response.json({error:"Paket "+(currentPlan.packageName||"member")+" sudah mencapai batas "+currentPlan.siteLimit+" website. Hapus website atau ubah paket.",code:"SITE_LIMIT",plan:currentPlan.plan,siteCount:Number(usage?.count||0),siteLimit:currentPlan.siteLimit},{status:409})}
     const finalUsage=await env.DB.prepare("SELECT COUNT(*) AS count FROM sites WHERE owner_id=?").bind(ownerId).first();
     const currentPlan=await getMemberPlan(env,ownerId);
     return Response.json({site:{id,name:site.name,slug:site.slug,status:"draft",created_at:now,updated_at:now},...currentPlan,siteCount:Number(finalUsage?.count||0)},{status:201});
@@ -66,7 +66,7 @@ export async function onRequestPost({request,env}){
     console.error("[member-sites:create]",error);
     if(slugConflict(error))return Response.json({error:"Slug ini sudah dipakai. Coba alamat lain."},{status:409});
     const message=String(error?.message||error);
-    if(message.includes("no such table: member_subscriptions"))return Response.json({error:"Langganan belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
+    if(["member_subscriptions","subscription_plans","member_plan_assignments"].some(table=>message.includes("no such table: "+table)))return Response.json({error:"Paket member belum disiapkan. Jalankan ulang admin-schema.sql versi terbaru di D1."},{status:503});
     if(message.includes("no such table: ip_rate_limits"))return Response.json({error:"Batas pembuatan website belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     if(message.includes("no such table: site_content"))return Response.json({error:"Penyimpanan draft belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     return Response.json({error:"Gagal menyimpan draft website."},{status:500});
