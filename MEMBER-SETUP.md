@@ -6,10 +6,11 @@ The member account system runs in Cloudflare Pages Functions and needs one D1 da
 In Cloudflare Dashboard, create a D1 database. In the SiteForge Pages project, add a D1 binding named `DB` and select that database. Cloudflare Pages Functions receive the binding through `env.DB`.
 
 ## 2. Apply schema
-Run `schema.sql` against the database using the D1 console or Wrangler:
+Run both `schema.sql` and `admin-schema.sql` against the database using the D1 console or Wrangler:
 
 ```sh
 npx wrangler d1 execute YOUR_DATABASE_NAME --remote --file=schema.sql
+npx wrangler d1 execute YOUR_DATABASE_NAME --remote --file=admin-schema.sql
 ```
 
 ## 3. Set admin secrets
@@ -26,4 +27,4 @@ Redeploy SiteForge from the repository root. Member routes:
 Passwords are PBKDF2-hashed server-side; the database stores only password salt/hash and hashed session tokens. Session cookies are HttpOnly, Secure, and SameSite=Lax.
 
 ## Current scope
-Authentication and account sessions are implemented. Saving drafts/sites to member accounts, password reset, email verification, abuse rate limiting, and live admin metrics are not yet connected.
+Member authentication and admin monitoring APIs are implemented. The admin dashboard reads D1 metrics and supports site status/report review actions with an audit trail. Site publishing and member draft persistence are not yet connected, so site/deploy metrics remain empty until those features write to the tables. Password reset, email verification, and abuse rate limiting are not yet connected.
