@@ -14,6 +14,12 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 .btn{display:inline-flex;align-items:center;gap:8px;background:#20211f;color:white;padding:12px 16px;border-radius:8px;font-weight:700;font-size:12px}.btn span{color:#c9f36a}.btn.disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
 .notice{border:1px solid #edc7c1;background:#fff5f3;color:#a8463b;padding:12px 14px;border-radius:8px;font-size:12px;margin:0 0 18px}.notice[hidden]{display:none}
 .plan-card{display:flex;align-items:center;justify-content:space-between;gap:18px;background:#fff;border:1px solid #e8e8e1;border-radius:12px;padding:18px 20px;margin:0 0 22px}.plan-card[hidden]{display:none}.plan-card h2{font:700 17px Manrope,Arial,sans-serif;margin:5px 0}.plan-card p{margin:0;color:#777b72;font-size:12px;line-height:1.5}.plan-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plan-select{min-width:190px;border:1px solid #e4e5de;border-radius:8px;background:#fbfaf7;padding:11px 12px;font:inherit;font-size:12px}.plan-select[hidden]{display:none}.plan-actions button{border:0}.plan-actions .upgrade{background:#c9f36a;color:#20211f}.plan-actions .cancel{background:#fff;color:#777b72;border:1px solid #e4e5de;padding:10px 12px;border-radius:8px;font-size:11px;font-weight:650}.plan-actions button:disabled{opacity:.55;cursor:not-allowed}
+.history-card{background:#fff;border:1px solid #e8e8e1;border-radius:12px;padding:18px 20px;margin:0 0 22px}
+.history-card[hidden]{display:none}.history-head{margin-bottom:12px}.history-head h2{font:700 15px Manrope,Arial,sans-serif;margin:0}.history-head p,.history-note{font-size:11px;line-height:1.5;color:#858780;margin:6px 0 0}
+.history-table-wrap{overflow-x:auto}.history-card table{width:100%;border-collapse:collapse;font-size:12px}.history-card th{text-align:left;color:#858780;font-weight:600;padding:9px 8px;border-bottom:1px solid #ecece6;white-space:nowrap}.history-card td{padding:11px 8px;border-bottom:1px solid #f0f0eb;vertical-align:top}.history-card tr:last-child td{border-bottom:0}.history-status{display:inline-block;border-radius:20px;padding:4px 8px;background:#f1f1ed;color:#696c64;font-size:10px;font-weight:650}.history-status.success{background:#edf8dc;color:#587b2b}.history-status.failed{background:#fff0ed;color:#a84d40}.history-empty,.history-error{font-size:12px;color:#858780;margin:14px 0 2px}.history-error{color:#a84d40}
+.account-tools{border-top:1px solid #e9eae4;margin-top:18px;padding-top:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}.account-tools h3{font-size:13px;margin:0 0 4px}.account-tools p{font-size:11px;line-height:1.45;color:#777b72;margin:0;max-width:390px}.account-tool-buttons{display:flex;gap:8px;flex-wrap:wrap}.account-tool-buttons button{border:1px solid #e2e4dc;border-radius:7px;background:#fff;padding:9px 11px;font-size:11px;font-weight:650;cursor:pointer}.account-tool-buttons .danger{color:#a84238;border-color:#f0d6d2}
+.dashboard-footer{max-width:1220px;margin:34px auto 0;padding:20px 0;border-top:1px solid #e8e8e1;display:flex;gap:16px;flex-wrap:wrap;color:#858780;font-size:11px}.dashboard-footer a{color:inherit;text-decoration:none}.dashboard-footer a:hover{text-decoration:underline}
+.delete-dialog .profile-head p{max-width:390px}.delete-dialog .profile-fields{margin-top:18px}.delete-dialog .danger-submit{background:#a83f35}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.grid[hidden],.empty[hidden]{display:none}
 .card{background:#fff;border:1px solid #e8e8e1;border-radius:12px;overflow:hidden}
 .thumb{height:132px;background:linear-gradient(145deg,#dfe5d9 0 42%,#87957f 43% 72%,#475d50 73%);position:relative;padding:14px;display:flex;align-items:flex-start;justify-content:space-between}
@@ -32,17 +38,43 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 <section class="heading"><div><div class="eyebrow">WORKSPACE / MEMBER</div><h1>Website kamu</h1><p class="sub" id="siteUsage">Paket gratis: 0 / 2 website</p></div><a class="btn" id="createSite" href="/builder.html">Buat website <span>↗</span></a></section>
 <div id="notice" class="notice" role="status" hidden></div>
 <section id="planCard" class="plan-card" hidden><div><div class="eyebrow" id="planLabel">PAKET</div><h2 id="planTitle">Paket Gratis</h2><p id="planDescription"></p></div><div class="plan-actions"><select id="packageSelect" class="plan-select" aria-label="Pilih paket"></select><button id="upgradeButton" class="btn upgrade" type="button">Pilih paket</button><button id="cancelButton" class="cancel" type="button" hidden>Batalkan perpanjangan</button></div></section>
+<section class="history-card" id="billingHistory" hidden><div class="history-head"><h2>Riwayat pembayaran</h2><p>Status dan tarif siklus langganan yang tercatat dari Xendit.</p></div><div class="history-table-wrap"><table id="billingTable"><thead><tr><th>Paket / siklus</th><th>Status</th><th>Nilai tagihan</th><th>Tanggal</th></tr></thead><tbody id="billingRows"></tbody></table></div><p class="history-empty" id="billingEmpty" hidden>Belum ada siklus pembayaran yang tercatat.</p><p class="history-error" id="billingError" hidden></p><p class="history-note">Nilai menggunakan tarif paket saat checkout. Status diperbarui dari notifikasi Xendit.</p></section>
 <section id="loading" class="empty"><p>Memuat website kamu…</p></section>
 <section id="empty" class="empty" hidden><div class="icon">✳</div><h2>Belum ada website</h2><p>Mulai dari template, sesuaikan konten dan SEO, lalu simpan sebagai draft.</p><a class="btn" href="/builder.html">Buat website <span>↗</span></a></section>
 <section id="grid" class="grid" hidden></section>
 </main>
-<dialog class="profile-dialog" id="profileDialog"><form id="profileForm"><div class="profile-head"><div><h2>Profil member</h2><p>Ubah informasi akun atau password. Password saat ini diperlukan untuk menyimpan perubahan.</p></div><button class="logout" id="closeProfile" type="button">Tutup</button></div><div class="profile-fields"><label>Nama tampilan<input id="profileName" type="text" maxlength="60" autocomplete="name" required></label><label>Email<input id="profileEmail" type="email" maxlength="254" autocomplete="email" required></label><label>Password saat ini<input id="profileCurrentPassword" type="password" autocomplete="current-password" required></label><label>Password baru (opsional)<input id="profileNewPassword" type="password" minlength="12" maxlength="256" autocomplete="new-password"></label><label>Ulangi password baru<input id="profileConfirmPassword" type="password" minlength="12" maxlength="256" autocomplete="new-password"></label><div class="profile-note">Password baru minimal 12 karakter. Jika tidak ingin mengganti password, biarkan kedua kolom password baru kosong.</div></div><div class="profile-actions"><button id="cancelProfile" type="button">Batal</button><button class="save" id="saveProfile" type="submit">Simpan profil</button></div></form></dialog>
+<footer class="dashboard-footer" aria-label="Informasi layanan"><a href="/terms.html">Ketentuan</a><a href="/privacy.html">Privasi</a><a href="/acceptable-use.html">Aturan penggunaan</a></footer>
+<dialog class="profile-dialog" id="profileDialog"><form id="profileForm"><div class="profile-head"><div><h2>Profil member</h2><p>Ubah informasi akun atau password. Password saat ini diperlukan untuk menyimpan perubahan.</p></div><button class="logout" id="closeProfile" type="button">Tutup</button></div><div class="profile-fields"><label>Nama tampilan<input id="profileName" type="text" maxlength="60" autocomplete="name" required></label><label>Email<input id="profileEmail" type="email" maxlength="254" autocomplete="email" required></label><label>Password saat ini<input id="profileCurrentPassword" type="password" autocomplete="current-password" required></label><label>Password baru (opsional)<input id="profileNewPassword" type="password" minlength="12" maxlength="256" autocomplete="new-password"></label><label>Ulangi password baru<input id="profileConfirmPassword" type="password" minlength="12" maxlength="256" autocomplete="new-password"></label><div class="profile-note">Password baru minimal 12 karakter. Jika tidak ingin mengganti password, biarkan kedua kolom password baru kosong.</div></div><div class="profile-actions"><button id="cancelProfile" type="button">Batal</button><button class="save" id="saveProfile" type="submit">Simpan profil</button></div>
+<section class="account-tools"><div><h3>Data akun</h3><p>Unduh salinan data atau hapus akun. Jika ada langganan aktif, SiteForge akan mencoba menghentikan perpanjangannya.</p></div><div class="account-tool-buttons"><button id="exportData" type="button">Unduh data</button><button id="openDeleteDialog" type="button" class="danger">Hapus akun</button></div></section></form></dialog>
+<dialog class="profile-dialog delete-dialog" id="deleteDialog"><form id="deleteForm"><div class="profile-head"><div><h2>Hapus akun permanen?</h2><p>Website, draft, gambar, sesi login, dan riwayat paket SiteForge akan dihapus. Langganan Xendit aktif akan dibatalkan terlebih dulu.</p></div><button class="logout" id="closeDeleteDialog" type="button">Tutup</button></div><div class="profile-fields"><label>Password saat ini<input id="deletePassword" type="password" autocomplete="current-password" required></label><label>Ketik HAPUS AKUN untuk konfirmasi<input id="deleteConfirmation" type="text" autocomplete="off" required></label><div class="profile-note" id="deleteError" role="status"></div></div><div class="profile-actions"><button id="cancelDelete" type="button">Batal</button><button id="confirmDelete" class="save danger-submit" type="submit">Hapus akun dan data</button></div></form></dialog>
 <script>
 const $=s=>document.querySelector(s),grid=$("#grid"),notice=$("#notice");
 let billingState=null,memberProfile=null;
 function priceLabel(amount,currency,country){
   if(!amount||!currency)return "";
   try{return new Intl.NumberFormat(country==="MY"?"ms-MY":"id-ID",{style:"currency",currency,maximumFractionDigits:currency==="IDR"?0:2}).format(amount)}catch{return amount+" "+currency}
+}
+function renderBillingHistory(data){
+ const root=$("#billingHistory"),rows=$("#billingRows"),empty=$("#billingEmpty"),table=$("#billingTable"),error=$("#billingError");
+ rows.replaceChildren();error.hidden=true;empty.hidden=false;table.hidden=!!(data.error);root.hidden=false;
+ if(data.error){error.textContent=data.error;error.hidden=false;empty.hidden=true;return}
+ const items=Array.isArray(data.payments)?data.payments:[];
+ empty.hidden=items.length>0;table.hidden=items.length===0;
+ const labels={SUCCEEDED:"Berhasil",FAILED:"Gagal",RETRYING:"Dicoba lagi",PENDING:"Diproses"};
+ for(const item of items){
+  const tr=document.createElement("tr");
+  const name=document.createElement("td");name.textContent=(item.planName||"Paket")+" · "+(Number(item.cycleNumber)>0?"Siklus #"+item.cycleNumber:"Pembayaran awal");
+  const status=document.createElement("td"),badge=document.createElement("span");badge.className="history-status"+(item.status==="SUCCEEDED"?" success":item.status==="FAILED"?" failed":"");badge.textContent=labels[item.status]||item.status;status.append(badge);
+  const amount=document.createElement("td");amount.textContent=priceLabel(Number(item.amount),item.currency,item.country)||"—";
+  const date=document.createElement("td");const stamp=Number(item.updatedAt);date.textContent=stamp?new Date(stamp).toLocaleString("id-ID",{dateStyle:"medium",timeStyle:"short"}):"—";
+  tr.append(name,status,amount,date);rows.append(tr);
+ }
+}
+async function loadBillingHistory(){
+ try{
+  const response=await fetch("/api/billing/history"),data=await response.json();
+  renderBillingHistory(response.ok?data:{error:data.error||"Riwayat pembayaran gagal dimuat."});
+ }catch{renderBillingHistory({error:"Riwayat pembayaran tidak bisa dimuat sekarang."})}
 }
 function renderPlan(billing){
   billingState=billing;
@@ -182,6 +214,7 @@ async function loadSites(){
   const billingResponse=await fetch("/api/billing/status"),billing=await billingResponse.json();
   if(!billingResponse.ok)throw new Error(billing.error||"Status paket gagal dimuat.");
   renderPlan(billing);
+  await loadBillingHistory();
   const limit=Number(data.siteLimit)||2,count=(data.sites||[]).length,create=$("#createSite"),full=count>=limit;
   $("#siteUsage").textContent=(data.plan!=="free"?(data.packageName||"Paket member")+": ":"Paket gratis: ")+count+" / "+limit+" website";
   create.classList.toggle("disabled",full);create.dataset.limitFull=full?"true":"false";create.setAttribute("aria-disabled",full?"true":"false");
@@ -191,6 +224,25 @@ async function loadSites(){
   data.sites.forEach(site=>grid.append(makeCard(site)));grid.hidden=false;
 }
 $("#profileButton").addEventListener("click",openProfile);$("#profileForm").addEventListener("submit",saveProfile);$("#closeProfile").addEventListener("click",closeProfile);$("#cancelProfile").addEventListener("click",closeProfile);$("#profileDialog").addEventListener("close",()=>$("#profileForm").reset());
+$("#exportData").addEventListener("click",async()=>{
+ const button=$("#exportData");button.disabled=true;
+ try{const response=await fetch("/api/account/export");if(!response.ok){const data=await response.json();throw new Error(data.error||"Data gagal diunduh.")}const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement("a");link.href=url;link.download="siteforge-account-data.json";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+ catch(error){showError(error.message)}finally{button.disabled=false}
+});
+$("#openDeleteDialog").addEventListener("click",()=>{$("#deleteError").textContent="";$("#deletePassword").value="";$("#deleteConfirmation").value="";$("#deleteDialog").showModal()});
+function closeDeleteDialog(){$("#deleteDialog").close()}
+$("#closeDeleteDialog").addEventListener("click",closeDeleteDialog);$("#cancelDelete").addEventListener("click",closeDeleteDialog);
+$("#deleteForm").addEventListener("submit",async event=>{
+ event.preventDefault();const error=$("#deleteError"),button=$("#confirmDelete");error.textContent="";
+ if($("#deleteConfirmation").value.trim()!=="HAPUS AKUN"){error.textContent="Ketik HAPUS AKUN persis seperti yang diminta.";return}
+ button.disabled=true;
+ try{
+  const response=await fetch("/api/account/delete",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({current_password:$("#deletePassword").value,confirmation:$("#deleteConfirmation").value.trim()})});
+  const data=await response.json();if(!response.ok)throw new Error(data.error||"Akun belum bisa dihapus.");
+  location.replace("/account.html?account=deleted");
+ }catch(error){$("#deleteError").textContent=error.message}
+ finally{button.disabled=false}
+});
 $("#createSite").addEventListener("click",event=>{if($("#createSite").dataset.limitFull==="true"){event.preventDefault();showError(billingState?.plan!=="free"?"Batas "+billingState.siteLimit+" website untuk paket ini sudah tercapai.":"Batas gratis tercapai. Pilih paket berbayar untuk menambah kuota.")}});
 $("#upgradeButton").addEventListener("click",startCheckout);
 $("#cancelButton").addEventListener("click",cancelSubscription);
