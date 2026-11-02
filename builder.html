@@ -33,8 +33,8 @@
               <div class="field"><label for="metaDescription">Meta description <span class="counter" id="descCount">0/160</span></label><textarea id="metaDescription" maxlength="160">Nikmati kopi pilihan dan suasana hangat di Ruang Senja, kafe nyaman di Kemang, Jakarta. Temukan tempat jeda favoritmu.</textarea></div>
               <div class="field"><label for="siteSlug">URL halaman</label><div class="slug-input"><span>siteforge.site/</span><input id="siteSlug" value="ruang-senja" maxlength="60" aria-label="URL halaman"></div></div>
               <div class="field"><label for="keywords">Kata kunci</label><input id="keywords" value="kafe kemang, kopi jakarta, coffee shop" placeholder="pisahkan dengan koma"><div class="hint">Pisahkan setiap kata kunci dengan koma.</div></div>
-              <div class="field"><label for="heroImage">Gambar utama <span class="optional">opsional</span></label><input id="heroImage" type="url" placeholder="https://contoh.com/foto-kafe.jpg"><input id="heroImageFile" type="file" accept="image/*" hidden><div class="hint">Tempel tautan gambar publik untuk area hero.</div></div>
-              <div class="field"><label for="faviconUrl">Favicon / logo tab <span class="optional">opsional</span></label><div class="asset-line"><input id="faviconUrl" type="url" placeholder="https://contoh.com/favicon.png"><button type="button" id="faviconUpload" class="upload-btn">Pilih file</button><input type="file" id="faviconFile" accept="image/png,image/jpeg,image/svg+xml,image/x-icon" hidden></div><div class="favicon-preview"><img id="faviconPreview" alt="Pratinjau favicon" hidden><span id="faviconPlaceholder">✳</span><span>Pratinjau ikon tab</span></div></div>
+              <div class="field"><label for="heroImage">Gambar utama <span class="optional">opsional</span></label><input id="heroImage" type="url" placeholder="https://contoh.com/foto-kafe.jpg"><input id="heroImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><div class="hint">Tempel tautan gambar publik untuk area hero.</div></div>
+              <div class="field"><label for="faviconUrl">Favicon / logo tab <span class="optional">opsional</span></label><div class="asset-line"><input id="faviconUrl" type="url" placeholder="https://contoh.com/favicon.png"><button type="button" id="faviconUpload" class="upload-btn">Pilih file</button><input type="file" id="faviconFile" accept="image/png,image/jpeg,image/webp,image/gif" hidden></div><div class="favicon-preview"><img id="faviconPreview" alt="Pratinjau favicon" hidden><span id="faviconPlaceholder">✳</span><span>Pratinjau ikon tab</span></div></div>
               <div class="field"><label for="ogImage">Gambar social share <span class="optional">opsional</span></label><input id="ogImage" type="url" placeholder="https://contoh.com/gambar.jpg"></div>
               <div class="seo-checks"><span id="checkTitle">✓ Judul terisi</span><span id="checkDesc">✓ Deskripsi terisi</span><span id="checkSlug">✓ URL siap</span></div>
             </div>
@@ -102,6 +102,7 @@
     function safeImage(value){
       const source=String(value||'').trim();
       if(/^data:image\/(?:png|jpeg|webp|gif|x-icon|vnd\.microsoft\.icon|svg\+xml);base64,/i.test(source))return source;
+      if(/^\/media\/[A-Za-z0-9_-]{1,64}\/[0-9a-f-]{36}\.(?:png|jpg|webp|gif)$/i.test(source))return source;
       try{const u=new URL(source,location.href);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return ''}
     }
     function applyDraft(site){
@@ -154,12 +155,26 @@
         toast(error.message||'Draft tidak bisa dibuka.');
       }finally{button.disabled=false}
     }
+    async function storeDraftImage(value){
+      if(!/^data:image\//i.test(String(value||'')))return value||'';
+      const blob=await (await fetch(value)).blob();
+      const form=new FormData();form.append('file',blob,'site-image');
+      const response=await fetch('/api/assets',{method:'POST',body:form});
+      const type=response.headers.get('content-type')||'',data=type.includes('application/json')?await response.json():null;
+      if(response.status===401){location.replace('/account.html?next='+encodeURIComponent(location.pathname+location.search));throw new Error('Masuk kembali untuk menyimpan gambar.')}
+      if(!data)throw new Error('Penyimpanan gambar tidak merespons dengan benar.');
+      if(!response.ok)throw new Error(data.error||'Gambar gagal diunggah.');
+      return data.url;
+    }
     async function saveDraft(){
       const button=$('#saveDraft'),oldLabel=button.textContent;
       const body={name:business.value.trim(),slug:$('#siteSlug').value.trim(),content:draftContent()};
       if(!body.name){toast('Isi nama bisnis dulu.');return}
       button.disabled=true;button.textContent='Menyimpan…';
       try{
+        body.content.heroImage=await storeDraftImage(body.content.heroImage);
+        body.content.favicon=await storeDraftImage(body.content.favicon);
+        body.content.ogImage=await storeDraftImage(body.content.ogImage);
         const endpoint=editingSiteId?'/api/sites/'+encodeURIComponent(editingSiteId):'/api/sites';
         const response=await fetch(endpoint,{method:editingSiteId?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
         const type=response.headers.get('content-type')||'',data=type.includes('application/json')?await response.json():null;
@@ -168,6 +183,7 @@
         if(!response.ok)throw new Error(data.error||'Gagal menyimpan draft.');
         editingSiteId=data.site.id;
         history.replaceState(null,'','/builder.html?site='+encodeURIComponent(editingSiteId));
+        applyDraft({name:body.name,slug:data.site.slug,content:body.content});
         button.textContent='▣  Perbarui';
         toast('Draft tersimpan di dashboard.');
       }catch(error){toast(error.message||'Draft gagal disimpan.')}
