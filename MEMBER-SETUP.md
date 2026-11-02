@@ -39,7 +39,7 @@ Free accounts can create up to two websites. Pro accounts can create up to ten w
 
 ## Pro monthly subscription (Xendit)
 
-The member dashboard includes hosted monthly checkout through Xendit. The first payment is requested at checkout, then Xendit schedules monthly renewals. SiteForge grants Pro only after an authenticated `recurring.cycle.succeeded` webhook; a browser redirect alone never upgrades an account. Canceling stops future renewal and keeps Pro access until the paid period ends.
+The member dashboard includes hosted monthly checkout through Xendit. The first payment is requested at checkout, then Xendit schedules monthly renewals. SiteForge grants Pro only after an authenticated `recurring.cycle.succeeded` webhook; a browser redirect alone never upgrades an account. Canceling stops future renewal and keeps Pro access until the paid period ends. Published sites already online remain live after Pro expires, but a free account cannot publish additional websites beyond its two-site limit; reducing the saved website count to two is required before creating more.
 
 1. Run the latest `admin-schema.sql` in D1. It adds `member_subscriptions` and `member_subscription_cycles`.
 2. In the Pages project, add encrypted secrets `XENDIT_SECRET_KEY` and `XENDIT_WEBHOOK_TOKEN`.
