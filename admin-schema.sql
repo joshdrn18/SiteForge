@@ -111,3 +111,15 @@ CREATE TABLE IF NOT EXISTS member_plan_assignments (
  updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_member_plan_assignments_expiry ON member_plan_assignments(ends_at);
+
+
+CREATE TABLE IF NOT EXISTS admin_accounts (
+ id TEXT PRIMARY KEY CHECK(id='master'),
+ email TEXT NOT NULL UNIQUE COLLATE NOCASE,
+ display_name TEXT NOT NULL DEFAULT 'Master Admin',
+ password_salt TEXT NOT NULL,
+ password_hash TEXT NOT NULL,
+ session_version INTEGER NOT NULL DEFAULT 1,
+ created_at INTEGER NOT NULL,
+ updated_at INTEGER NOT NULL
+);
