@@ -24,10 +24,10 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 .empty{padding:55px 20px;text-align:center;background:#fff;border:1px dashed #d8d9d1;border-radius:12px}.empty .icon{font-size:28px}.empty h2{font:700 19px Manrope;margin:12px 0 6px}.empty p{max-width:390px;margin:0 auto 18px;color:#777b72;font-size:13px;line-height:1.6}
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.topbar{height:62px;padding:0 16px}.right{gap:8px}.email{display:none}main{padding:32px 15px 60px}.heading{align-items:flex-start;flex-direction:column}.plan-card{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.thumb{height:115px}}
-</style>
+.profile-open{display:flex;align-items:center;gap:8px;padding:3px 7px;border:1px solid transparent;border-radius:8px;background:transparent;color:inherit;font:inherit}.profile-open:hover{background:#f1f0ea;border-color:#e8e8e1}.profile-dialog{width:min(520px,calc(100% - 24px));max-height:calc(100vh - 24px);overflow:auto;border:0;border-radius:14px;padding:0;color:#20211f;box-shadow:0 24px 80px #1115}.profile-dialog::backdrop{background:#10120eb3}.profile-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:20px;border-bottom:1px solid #e8e8e1}.profile-head h2{margin:0;font:700 20px Manrope,Arial,sans-serif}.profile-head p{margin:5px 0 0;color:#777b72;font-size:12px;line-height:1.5}.profile-fields{display:grid;gap:13px;padding:20px}.profile-fields label{display:grid;gap:6px;font-size:12px;font-weight:650}.profile-fields input{width:100%;border:1px solid #e4e5de;border-radius:8px;padding:11px;font:13px Arial,sans-serif;color:#20211f}.profile-note{font-size:11px;color:#777b72;line-height:1.5}.profile-actions{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid #e8e8e1}.profile-actions button{border:1px solid #e4e5de;background:white;border-radius:8px;padding:10px 14px;font-weight:650;font-size:12px}.profile-actions .save{background:#20211f;color:white;border-color:#20211f}.profile-actions button:disabled{opacity:.55;cursor:not-allowed}.notice.success{border-color:#cfe3bd;background:#f2faeb;color:#416c2c}@media(max-width:560px){.profile-fields{padding:15px}.profile-head,.profile-actions{padding-left:15px;padding-right:15px}}</style>
 </head>
 <body>
-<header class="topbar"><a class="brand" href="/"><span class="mark">✳</span>siteforge</a><div class="right"><span class="email" id="email"></span><span class="avatar" id="avatar">M</span><button class="logout" id="logout">Keluar</button></div></header>
+<header class="topbar"><a class="brand" href="/"><span class="mark">✳</span>siteforge</a><div class="right"><span class="email" id="email"></span><button class="profile-open" id="profileButton" type="button" aria-label="Buka profil"><span class="avatar" id="avatar">M</span><span>Profil</span></button><button class="logout" id="logout">Keluar</button></div></header>
 <main>
 <section class="heading"><div><div class="eyebrow">WORKSPACE / MEMBER</div><h1>Website kamu</h1><p class="sub" id="siteUsage">Paket gratis: 0 / 2 website</p></div><a class="btn" id="createSite" href="/builder.html">Buat website <span>↗</span></a></section>
 <div id="notice" class="notice" role="status" hidden></div>
@@ -36,9 +36,10 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 <section id="empty" class="empty" hidden><div class="icon">✳</div><h2>Belum ada website</h2><p>Mulai dari template, sesuaikan konten dan SEO, lalu simpan sebagai draft.</p><a class="btn" href="/builder.html">Buat website <span>↗</span></a></section>
 <section id="grid" class="grid" hidden></section>
 </main>
+<dialog class="profile-dialog" id="profileDialog"><form id="profileForm"><div class="profile-head"><div><h2>Profil member</h2><p>Ubah informasi akun atau password. Password saat ini diperlukan untuk menyimpan perubahan.</p></div><button class="logout" id="closeProfile" type="button">Tutup</button></div><div class="profile-fields"><label>Nama tampilan<input id="profileName" type="text" maxlength="60" autocomplete="name" required></label><label>Email<input id="profileEmail" type="email" maxlength="254" autocomplete="email" required></label><label>Password saat ini<input id="profileCurrentPassword" type="password" autocomplete="current-password" required></label><label>Password baru (opsional)<input id="profileNewPassword" type="password" minlength="12" maxlength="256" autocomplete="new-password"></label><label>Ulangi password baru<input id="profileConfirmPassword" type="password" minlength="12" maxlength="256" autocomplete="new-password"></label><div class="profile-note">Password baru minimal 12 karakter. Jika tidak ingin mengganti password, biarkan kedua kolom password baru kosong.</div></div><div class="profile-actions"><button id="cancelProfile" type="button">Batal</button><button class="save" id="saveProfile" type="submit">Simpan profil</button></div></form></dialog>
 <script>
 const $=s=>document.querySelector(s),grid=$("#grid"),notice=$("#notice");
-let billingState=null;
+let billingState=null,memberProfile=null;
 function priceLabel(amount,currency,country){
   if(!amount||!currency)return "";
   try{return new Intl.NumberFormat(country==="MY"?"ms-MY":"id-ID",{style:"currency",currency,maximumFractionDigits:currency==="IDR"?0:2}).format(amount)}catch{return amount+" "+currency}
@@ -101,6 +102,23 @@ function renderPlan(billing){
   updateButton();
   $("#planDescription").textContent=plans.length?"Gratis sampai 2 website. Pilih paket berbayar untuk menambah batas website.":"Gratis sampai 2 website. Paket berbayar belum diaktifkan admin.";
 }
+function showSuccess(message){notice.classList.add("success");notice.textContent=message;notice.hidden=false}
+function openProfile(){if(!memberProfile)return;const form=$("#profileForm");form.reset();$("#profileName").value=memberProfile.name||"";$("#profileEmail").value=memberProfile.email||"";$("#profileDialog").showModal();$("#profileCurrentPassword").focus()}
+function closeProfile(){$("#profileDialog").close();$("#profileForm").reset()}
+async function saveProfile(event){
+ event.preventDefault();
+ const fresh=$("#profileNewPassword").value,confirmPassword=$("#profileConfirmPassword").value;
+ if((fresh||confirmPassword)&&fresh!==confirmPassword){showError("Konfirmasi password baru tidak sama.");$("#profileConfirmPassword").focus();return}
+ const button=$("#saveProfile");button.disabled=true;
+ try{
+  const response=await fetch("/api/profile",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:$("#profileName").value,email:$("#profileEmail").value,current_password:$("#profileCurrentPassword").value,new_password:fresh})});
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"Profil gagal disimpan.");
+  memberProfile=data.user;$("#email").textContent=memberProfile.email;$("#avatar").textContent=(memberProfile.name||"M").trim().slice(0,1).toUpperCase()||"M";
+  $("#profileDialog").close();showSuccess("Profil berhasil diperbarui.");
+ }catch(error){showError(error.message);$("#profileCurrentPassword").value="";$("#profileNewPassword").value="";$("#profileConfirmPassword").value="";$("#profileCurrentPassword").focus()}
+ finally{button.disabled=false}
+}
 async function startCheckout(){
   if(billingState?.subscription?.checkoutUrl){location.assign(billingState.subscription.checkoutUrl);return}
   if(!billingState?.checkoutEnabled){showError("Paket berbayar belum diaktifkan admin.");return}
@@ -125,7 +143,7 @@ async function cancelSubscription(){
   }catch(error){showError(error.message)}
   finally{button.disabled=false}
 }
-function showError(message){notice.textContent=message;notice.hidden=false}
+function showError(message){notice.classList.remove("success");notice.textContent=message;notice.hidden=false}
 function makeCard(site){
   const card=document.createElement("article");card.className="card";
   const thumb=document.createElement("div");thumb.className="thumb";
@@ -158,7 +176,7 @@ async function loadSites(){
   if(me.status===401){location.replace("/account.html?next=%2Fdashboard.html");return}
   const member=await me.json();
   if(!me.ok)throw new Error(member.error||"Sesi member tidak bisa dibaca.");
-  $("#email").textContent=member.user.email;$("#avatar").textContent=(member.user.name||"M").trim().slice(0,1).toUpperCase()||"M";
+  memberProfile=member.user;$("#email").textContent=memberProfile.email;$("#avatar").textContent=(memberProfile.name||"M").trim().slice(0,1).toUpperCase()||"M";
   const response=await fetch("/api/sites"),data=await response.json();
   if(!response.ok)throw new Error(data.error||"Website gagal dimuat.");
   const billingResponse=await fetch("/api/billing/status"),billing=await billingResponse.json();
@@ -172,6 +190,7 @@ async function loadSites(){
   if(!data.sites||!data.sites.length){$("#empty").hidden=false;return}
   data.sites.forEach(site=>grid.append(makeCard(site)));grid.hidden=false;
 }
+$("#profileButton").addEventListener("click",openProfile);$("#profileForm").addEventListener("submit",saveProfile);$("#closeProfile").addEventListener("click",closeProfile);$("#cancelProfile").addEventListener("click",closeProfile);$("#profileDialog").addEventListener("close",()=>$("#profileForm").reset());
 $("#createSite").addEventListener("click",event=>{if($("#createSite").dataset.limitFull==="true"){event.preventDefault();showError(billingState?.plan!=="free"?"Batas "+billingState.siteLimit+" website untuk paket ini sudah tercapai.":"Batas gratis tercapai. Pilih paket berbayar untuk menambah kuota.")}});
 $("#upgradeButton").addEventListener("click",startCheckout);
 $("#cancelButton").addEventListener("click",cancelSubscription);
