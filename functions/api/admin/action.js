@@ -4,6 +4,8 @@ async function actor(request){try{const t=(request.headers.get('Cookie')||'').sp
 function sameOrigin(request){const origin=request.headers.get('Origin');return !origin||origin===new URL(request.url).origin}
 async function audit(env,who,action,targetType,targetId,reason,now){await env.DB.prepare('INSERT INTO admin_audit_events (id,actor_email,action,target_type,target_id,reason,created_at) VALUES (?,?,?,?,?,?,?)').bind(crypto.randomUUID(),who,action,targetType,targetId,reason||null,now).run()}
 function jsonError(error,status,extra={}){return Response.json({error,...extra},{status})}
+function b64(bytes){let value='';for(const byte of new Uint8Array(bytes))value+=String.fromCharCode(byte);return btoa(value).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}
+async function passwordHash(password,salt){const key=await crypto.subtle.importKey('raw',enc.encode(password),'PBKDF2',false,['deriveBits']);return b64(await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt,iterations:100000},key,256))}
 function amountValid(amount,currency){return Number.isFinite(amount)&&amount>=0&&(currency==='IDR'?Number.isInteger(amount):Math.round(amount*100)===amount*100)}
 export async function onRequestPost({request,env}){
   if(!env.DB)return jsonError('D1 binding DB belum dipasang.',503);
@@ -36,6 +38,22 @@ export async function onRequestPost({request,env}){
       const result=await env.DB.prepare("UPDATE abuse_reports SET status='reviewed',reviewed_by=?,reviewed_at=? WHERE id=? AND status='open'").bind(who,now,b.id).run();
       if(!result.meta?.changes)return jsonError('Laporan tidak ditemukan atau sudah ditinjau.',404);
       await audit(env,who,b.action,'report',b.id,null,now);
+    }else if(b.action==='member-password-set'){
+      const memberId=String(b.member_id||'');
+      if(!memberId)return jsonError('ID member wajib.',400);
+      if(typeof b.password!=='string')return jsonError('Password baru tidak valid.',400);
+      const password=b.password;
+      if(password.length<12||password.length>256)return jsonError('Password baru harus 12 sampai 256 karakter.',400);
+      const member=await env.DB.prepare('SELECT id FROM members WHERE id=?').bind(memberId).first();
+      if(!member)return jsonError('Member tidak ditemukan.',404);
+      const salt=crypto.getRandomValues(new Uint8Array(16));
+      const saltText=b64(salt);
+      const hash=await passwordHash(password,salt);
+      await env.DB.batch([
+        env.DB.prepare('UPDATE members SET password_salt=?,password_hash=? WHERE id=?').bind(saltText,hash,memberId),
+        env.DB.prepare('DELETE FROM member_sessions WHERE member_id=?').bind(memberId),
+        env.DB.prepare('INSERT INTO admin_audit_events (id,actor_email,action,target_type,target_id,reason,created_at) VALUES (?,?,?,?,?,?,?)').bind(crypto.randomUUID(),who,b.action,'member',memberId,'Password diganti admin; seluruh sesi member dicabut',now)
+      ]);
     }else if(b.action==='plan-save'){
       const code=String(b.code||'').trim().toLowerCase();
       const name=String(b.name||'').trim().slice(0,60);

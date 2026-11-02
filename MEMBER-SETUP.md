@@ -37,7 +37,7 @@ Deploy SiteForge, then open `/admin.html` and sign in as the master admin. In th
 
 The database seeds a **Gratis** package with a two-website limit and a disabled **Pro Bulanan** package. Set its price and enable it before member checkout becomes available. You can also create more monthly packages; active paid packages appear in the member dashboard.
 
-In **Members**, select **Paket** to assign a package to one account, optionally with an end date and reason. Removing an admin package assignment returns the member to their current paid Xendit package or Gratis. If the member has an active Xendit recurring plan, the admin panel requires the explicit cancellation checkbox before replacing their package. This calls Xendit to stop future renewals.
+In **Members**, select **Paket** to assign a package to one account, optionally with an end date and reason. Select **Ganti password** to set a new password (minimum 12 characters). This immediately revokes all existing member sessions; share the new password with the account owner directly. The panel never stores the plaintext password or writes it to the audit log. Removing an admin package assignment returns the member to their current paid Xendit package or Gratis. If the member has an active Xendit recurring plan, the admin panel requires the explicit cancellation checkbox before replacing their package. This calls Xendit to stop future renewals.
 
 Changing a package's name or website limit applies to members on that package. Changing its price applies to future checkouts; it does not change the recurring price already stored by Xendit for existing subscribers. Deactivating a package hides it from new checkouts but does not remove existing member access.
 
