@@ -27,4 +27,11 @@ const enc = b => Buffer.from(b).toString('base64url');
 console.log(enc(salt)+'.'+enc(bits));
 ```
 
-Deploy the Pages Functions from the repository root. The admin dashboard still uses sample metrics; real monitoring requires API/database bindings.
+Deploy the Pages Functions from the repository root. The admin dashboard reads its metrics, websites, members, reports, and audit log from the bound D1 database.
+
+
+## Panel admin
+
+Panel master admin menampilkan metrik, daftar website dan member, laporan terbuka, serta audit log. Admin dapat mengedit nama, slug, teks utama, dan metadata SEO website; menonaktifkan atau memulihkan website; menangguhkan atau memulihkan member; serta meninjau laporan. Menangguhkan member akan mengakhiri semua sesi login dan mencegah login baru. Perubahan konten website yang sudah tayang langsung terlihat di `/s/<slug>`.
+
+Jalankan ulang `admin-schema.sql` di D1 agar tabel `member_admin_status` dibuat. File aman dijalankan ulang.
