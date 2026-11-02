@@ -47,5 +47,6 @@ Validasi tipe/ukuran aset, escape teks, larang HTML/JS bebas, reserve slug siste
 
 ## Implementasi saat ini
 - `index.html`: prototype builder.
-- `admin.html`: panel master admin untuk monitoring, moderasi member/website, laporan, dan audit log.
-- Login member, penyimpanan draft ke D1, dashboard member, dan API admin sudah terhubung. Admin dapat mengedit teks/SEO website, menangguhkan/memulihkan member, menonaktifkan website live, meninjau laporan, dan melihat audit log. Situs live tersedia di `/s/<slug>` pada Pages project yang sama. Paket gratis dibatasi dua website; paket Pro bulanan membuka sampai sepuluh website melalui checkout Xendit dan status pembayaran D1.
+- `admin.html`: panel master admin untuk monitoring, moderasi website/member, laporan, audit log, dan pengelolaan paket.
+- Login member, penyimpanan draft ke D1, dashboard member, dan API admin sudah terhubung. Admin dapat mengedit teks/SEO website, menangguhkan atau memulihkan member, menonaktifkan website live, meninjau laporan, mengatur paket dan kuota per member, serta mengubah paket yang tersedia untuk checkout. Situs live tersedia di `/s/<slug>` pada Pages project yang sama.
+- Paket Gratis awal dibatasi dua website. Admin dapat mengatur harga, kuota, deskripsi, wilayah penagihan, dan ketersediaan paket bulanan. Pembayaran checkout menggunakan Xendit; perubahan harga memengaruhi checkout baru, sedangkan harga tagihan yang sudah berjalan tetap dikelola oleh Xendit.
