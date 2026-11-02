@@ -1,50 +1,60 @@
-# Member login setup
+# Member login and packages
 
-The member account system runs in Cloudflare Pages Functions and needs one D1 database.
+SiteForge member accounts, saved websites, package limits, and admin controls run in Cloudflare Pages Functions with D1.
 
 ## 1. Create and bind D1
-In Cloudflare Dashboard, create a D1 database. In the SiteForge Pages project, add a D1 binding named `DB` and select that database. Cloudflare Pages Functions receive the binding through `env.DB`.
 
-## 2. Apply schema
-Run both `schema.sql` and `admin-schema.sql` against the database using the D1 console or Wrangler:
+In the Cloudflare Dashboard, create a D1 database. In the SiteForge Pages project, add a D1 binding named `DB` and select that database. Pages Functions read the binding through `env.DB`.
+
+## 2. Apply the database schema
+
+Run both `schema.sql` and `admin-schema.sql` against the same D1 database in the D1 console or with Wrangler:
 
 ```sh
 npx wrangler d1 execute YOUR_DATABASE_NAME --remote --file=schema.sql
 npx wrangler d1 execute YOUR_DATABASE_NAME --remote --file=admin-schema.sql
 ```
 
-## 3. Set admin secrets
-For the separate master-admin login, add encrypted Pages secrets:
-- `ADMIN_EMAIL`: the owner's chosen admin email.
-- `ADMIN_PASSWORD_HASH`: PBKDF2 hash as described in `ADMIN-SETUP.md`.
+After a SiteForge update that changes `admin-schema.sql`, run the latest file again. Its statements are safe to rerun; this creates or updates package catalog support without removing member data.
+
+## 3. Set admin and payment secrets
+
+For master-admin login, add encrypted Pages secrets:
+
+- `ADMIN_EMAIL`: the owner's admin email.
+- `ADMIN_PASSWORD_HASH`: PBKDF2 hash described in `ADMIN-SETUP.md`.
 - `SESSION_SECRET`: a fresh random secret.
 
-## 4. Deploy
-Redeploy SiteForge from the repository root. Member routes:
-- `/account.html` — signup and login.
-- `/dashboard.html` — private list of saved website drafts.
+For monthly checkout, add encrypted Pages secrets `XENDIT_SECRET_KEY` and `XENDIT_WEBHOOK_TOKEN`. Configure the Xendit recurring/subscription webhook to:
+
+`https://siteforge-aez.pages.dev/api/billing/webhook`
+
+Enable the recurring plan and cycle events. Copy the endpoint callback token into `XENDIT_WEBHOOK_TOKEN`. Use Xendit test credentials while validating the flow, then switch to live credentials when ready.
+
+## 4. Configure packages in Admin
+
+Deploy SiteForge, then open `/admin.html` and sign in as the master admin. In the **Plans** section you can add or edit package names, descriptions, monthly prices, billing country/currency, website limits, display order, and checkout availability.
+
+The database seeds a **Gratis** package with a two-website limit and a disabled **Pro Bulanan** package. Set its price and enable it before member checkout becomes available. You can also create more monthly packages; active paid packages appear in the member dashboard.
+
+In **Members**, select **Paket** to assign a package to one account, optionally with an end date and reason. Removing an admin package assignment returns the member to their current paid Xendit package or Gratis. If the member has an active Xendit recurring plan, the admin panel requires the explicit cancellation checkbox before replacing their package. This calls Xendit to stop future renewals.
+
+Changing a package's name or website limit applies to members on that package. Changing its price applies to future checkouts; it does not change the recurring price already stored by Xendit for existing subscribers. Deactivating a package hides it from new checkouts but does not remove existing member access.
+
+## 5. Deploy and use
+
+Redeploy SiteForge from the repository root. Main routes:
+
+- `/account.html` — member signup and login.
+- `/dashboard.html` — member's saved websites and package status.
 - `/builder.html` — create or edit a saved draft.
+- `/admin.html` — platform monitoring, website moderation/editing, member status, and package management.
 - `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`.
-- `/api/sites` and `/api/sites/:id` — owner-scoped draft storage.
+- `/api/sites` and `/api/sites/:id` — member-owned website storage.
+- `/api/billing/status`, `/api/billing/checkout`, `/api/billing/cancel`, and `/api/billing/webhook`.
 
-Passwords are PBKDF2-hashed server-side; the database stores only password salt/hash and hashed session tokens. Session cookies are HttpOnly, Secure, and SameSite=Lax.
+Passwords are PBKDF2-hashed server-side. D1 stores password hashes and hashed session tokens. Session cookies are HttpOnly, Secure, and SameSite=Lax.
 
-## Current scope
-Member authentication, draft storage, and the member dashboard use D1. `admin-schema.sql` creates `site_content`, `member_admin_status`, `ip_rate_limits`, `member_subscriptions`, and `member_subscription_cycles`; after an update, run the latest file again in D1 (all statements are safe to rerun). Drafts can be saved and edited. Published sites are served at `/s/<slug>` on the same Pages project. They do not create a separate Pages project or a `<slug>.pages.dev` subdomain. Password reset and email verification are not yet connected.
+Published member websites are served at `/s/<slug>` on the same Pages project. They do not create separate Pages projects or a `<slug>.pages.dev` subdomain. Published websites remain live if a member's paid period ends, but the member cannot create additional websites beyond the current package limit until the website count is within that limit. Password reset and email verification are not connected yet.
 
-Admin master can moderate members and edit website content from `/admin.html`. Suspended member accounts cannot start new sessions, and active sessions are removed when the suspension is applied.
-
-Free accounts can create up to two websites. Pro accounts can create up to ten websites while their paid period is active. Signups are limited to 5 per network per day; new sites and publications are limited to 10 each per network per day; the app stores a daily hash of the Cloudflare connecting IP for this limit, not the raw address.
-
-
-## Pro monthly subscription (Xendit)
-
-The member dashboard includes hosted monthly checkout through Xendit. The first payment is requested at checkout, then Xendit schedules monthly renewals. SiteForge grants Pro only after an authenticated `recurring.cycle.succeeded` webhook; a browser redirect alone never upgrades an account. Canceling stops future renewal and keeps Pro access until the paid period ends. Published sites already online remain live after Pro expires, but a free account cannot publish additional websites beyond its two-site limit; reducing the saved website count to two is required before creating more.
-
-1. Run the latest `admin-schema.sql` in D1. It adds `member_subscriptions` and `member_subscription_cycles`.
-2. In the Pages project, add encrypted secrets `XENDIT_SECRET_KEY` and `XENDIT_WEBHOOK_TOKEN`.
-3. Add the variable `PRO_MONTHLY_AMOUNT` with the price you choose. The default billing region is `BILLING_COUNTRY=ID` and `BILLING_CURRENCY=IDR`. Malaysia is also supported with `BILLING_COUNTRY=MY` and `BILLING_CURRENCY=MYR`. Keep the country/currency pair aligned.
-4. In Xendit, point the Subscription/Recurring webhook to `https://siteforge-aez.pages.dev/api/billing/webhook`, enable recurring plan and cycle events, and copy that endpoint's callback token into the Pages secret `XENDIT_WEBHOOK_TOKEN`.
-5. Redeploy. The Pro button stays disabled until the amount and both secrets are present.
-
-Routes: `/api/billing/status`, `/api/billing/checkout`, `/api/billing/cancel`, and `/api/billing/webhook`. Use Xendit test credentials first, then replace them with live credentials after verifying the callback and checkout flow.
+Signups are limited to five per network per day; new websites and publications are limited to ten each per network per day. SiteForge stores a daily hash of the Cloudflare connecting IP for this limit, not the raw address.
