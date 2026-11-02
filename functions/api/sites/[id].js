@@ -77,3 +77,25 @@ export async function onRequestDelete({request,env,params}){
     return Response.json({ok:true});
   }catch(error){console.error("[member-sites:delete]",error);return Response.json({error:"Gagal menghapus website."},{status:500})}
 }
+
+export async function onRequestPost({request,env,params}){
+  if(!sameOrigin(request))return Response.json({error:"Origin tidak valid."},{status:403});
+  try{
+    if(!env.DB)return Response.json({error:"Database belum dikonfigurasi."},{status:503});
+    const ownerId=await memberId(request,env);
+    if(!ownerId)return Response.json({error:"Sesi login tidak berlaku."},{status:401});
+    const site=await env.DB.prepare("SELECT s.id,s.name,s.slug,s.status,c.content_json FROM sites s LEFT JOIN site_content c ON c.site_id=s.id WHERE s.id=? AND s.owner_id=?").bind(params.id,ownerId).first();
+    if(!site)return Response.json({error:"Website tidak ditemukan."},{status:404});
+    if(site.status==="disabled")return Response.json({error:"Website ini dinonaktifkan admin."},{status:403});
+    if(!site.content_json)return Response.json({error:"Simpan draft website sebelum menerbitkannya."},{status:409});
+    const now=Date.now();
+    await env.DB.prepare("UPDATE sites SET status='published',updated_at=? WHERE id=? AND owner_id=?").bind(now,params.id,ownerId).run();
+    const url=new URL("/s/"+encodeURIComponent(site.slug),request.url).href;
+    return Response.json({site:{id:site.id,name:site.name,slug:site.slug,status:"published",updated_at:now,url}});
+  }catch(error){
+    console.error("[member-sites:publish]",error);
+    const message=String(error?.message||error);
+    if(message.includes("no such table: site_content"))return Response.json({error:"Penyimpanan draft belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
+    return Response.json({error:"Gagal menerbitkan website."},{status:500});
+  }
+}

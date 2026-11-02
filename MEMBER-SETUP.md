@@ -30,4 +30,4 @@ Redeploy SiteForge from the repository root. Member routes:
 Passwords are PBKDF2-hashed server-side; the database stores only password salt/hash and hashed session tokens. Session cookies are HttpOnly, Secure, and SameSite=Lax.
 
 ## Current scope
-Member authentication, draft storage, and the member dashboard use D1. `admin-schema.sql` now also creates `site_content`; if the previous version was already applied, run the updated file once more (all statements are safe to rerun). Drafts can be saved and edited. Public publishing to generated domains is still a separate feature. Password reset, email verification, and abuse rate limiting are not yet connected.
+Member authentication, draft storage, and the member dashboard use D1. `admin-schema.sql` now also creates `site_content`; if the previous version was already applied, run the updated file once more (all statements are safe to rerun). Drafts can be saved and edited. Published sites are served at `/s/<slug>` on the same Pages project. They do not create a separate Pages project or a `<slug>.pages.dev` subdomain. Password reset, email verification, and abuse rate limiting are not yet connected.

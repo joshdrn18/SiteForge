@@ -19,7 +19,7 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 .thumb b{font:800 14px Manrope;background:#ffffffc9;border-radius:6px;padding:6px 8px}
 .pill{font:9px 'DM Mono';text-transform:uppercase;letter-spacing:.6px;background:#f6f5f1;color:#64685f;border:1px solid #e3e3dc;border-radius:20px;padding:6px 8px}
 .cardbody{padding:15px}.cardbody h2{font:700 16px Manrope;margin:0 0 5px;overflow-wrap:anywhere}.slug{font:11px 'DM Mono';color:#858780;overflow-wrap:anywhere}.meta{display:flex;justify-content:space-between;gap:10px;margin-top:16px;color:#90938a;font-size:10px}
-.actions{display:flex;gap:8px;margin-top:15px}.actions a,.actions button{flex:1;text-align:center;border:1px solid #e4e5de;background:#fff;border-radius:7px;padding:9px 10px;font-size:11px;font-weight:650}.actions .edit{background:#c9f36a;border-color:#c9f36a}.actions .delete{color:#a84c42}
+.actions{display:flex;gap:8px;margin-top:15px}.actions a,.actions button{flex:1;text-align:center;border:1px solid #e4e5de;background:#fff;border-radius:7px;padding:9px 10px;font-size:11px;font-weight:650}.actions .edit{background:#c9f36a;border-color:#c9f36a}.actions .publish{background:#20211f;border-color:#20211f;color:white}.actions .view{background:#f4f5ef}.actions .delete{color:#a84c42}
 .empty{padding:55px 20px;text-align:center;background:#fff;border:1px dashed #d8d9d1;border-radius:12px}.empty .icon{font-size:28px}.empty h2{font:700 19px Manrope;margin:12px 0 6px}.empty p{max-width:390px;margin:0 auto 18px;color:#777b72;font-size:13px;line-height:1.6}
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.topbar{height:62px;padding:0 16px}.right{gap:8px}.email{display:none}main{padding:32px 15px 60px}.heading{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.thumb{height:115px}}
@@ -41,18 +41,26 @@ function makeCard(site){
   const card=document.createElement("article");card.className="card";
   const thumb=document.createElement("div");thumb.className="thumb";
   const mark=document.createElement("b");mark.textContent=(site.name||"SiteForge").slice(0,1).toUpperCase();thumb.append(mark);
-  const status=document.createElement("span");status.className="pill";status.textContent=site.status==="published"?"Published":site.status==="disabled"?"Disabled":"Draft";thumb.append(status);
+  const status=document.createElement("span");status.className="pill";status.textContent=site.status==="published"?"Live":site.status==="disabled"?"Disabled":"Draft";thumb.append(status);
   const body=document.createElement("div");body.className="cardbody";
   const title=document.createElement("h2");title.textContent=site.name;body.append(title);
-  const slug=document.createElement("div");slug.className="slug";slug.textContent="/"+site.slug;body.append(slug);
+  const slug=document.createElement("div");slug.className="slug";slug.textContent="/s/"+site.slug;body.append(slug);
   const meta=document.createElement("div");meta.className="meta";
   const created=document.createElement("span");created.textContent="Dibuat "+new Date(Number(site.created_at)).toLocaleDateString("id-ID",{day:"numeric",month:"short",year:"numeric"});
   const updated=document.createElement("span");updated.textContent="Diubah "+new Date(Number(site.updated_at)).toLocaleDateString("id-ID",{day:"numeric",month:"short"});
   meta.append(created,updated);body.append(meta);
   const actions=document.createElement("div");actions.className="actions";
   const edit=document.createElement("a");edit.className="edit";edit.href="/builder.html?site="+encodeURIComponent(site.id);edit.textContent="Edit";
+  if(site.status==="published"){
+    const view=document.createElement("a");view.className="view";view.href="/s/"+encodeURIComponent(site.slug);view.target="_blank";view.rel="noopener";view.textContent="Lihat";
+    actions.append(view);
+  }else{
+    const publish=document.createElement("button");publish.className="publish";publish.type="button";publish.textContent="Terbitkan";
+    publish.addEventListener("click",async()=>{publish.disabled=true;try{const r=await fetch("/api/sites/"+encodeURIComponent(site.id),{method:"POST"}),d=await r.json();if(!r.ok)throw new Error(d.error||"Website gagal diterbitkan.");await loadSites()}catch(e){showError(e.message)}finally{publish.disabled=false}});
+    actions.append(publish);
+  }
   const del=document.createElement("button");del.className="delete";del.type="button";del.textContent="Hapus";
-  del.addEventListener("click",async()=>{if(!confirm("Hapus draft "+site.name+"?"))return;del.disabled=true;try{const r=await fetch("/api/sites/"+encodeURIComponent(site.id),{method:"DELETE"}),d=await r.json();if(!r.ok)throw new Error(d.error||"Draft gagal dihapus.");await loadSites()}catch(e){showError(e.message)}finally{del.disabled=false}});
+  del.addEventListener("click",async()=>{if(!confirm("Hapus website "+site.name+"?"))return;del.disabled=true;try{const r=await fetch("/api/sites/"+encodeURIComponent(site.id),{method:"DELETE"}),d=await r.json();if(!r.ok)throw new Error(d.error||"Website gagal dihapus.");await loadSites()}catch(e){showError(e.message)}finally{del.disabled=false}});
   actions.append(edit,del);body.append(actions);card.append(thumb,body);return card;
 }
 async function loadSites(){
