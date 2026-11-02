@@ -15,6 +15,16 @@ async function sha(value) {
   return b64(await crypto.subtle.digest("SHA-256", enc.encode(value)));
 }
 
+async function consumeIpLimit(env,request,limit){
+  const ip=(request.headers.get("CF-Connecting-IP")||"").trim();
+  if(!ip)return {allowed:true,attempts:0};
+  const day=Math.floor(Date.now()/86400000),ipHash=await sha(day+"|"+ip),now=Date.now();
+  const row=await env.DB.prepare("INSERT INTO ip_rate_limits (action,ip_hash,window_start,attempts,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(action,ip_hash) DO UPDATE SET attempts=ip_rate_limits.attempts+1,updated_at=excluded.updated_at RETURNING attempts").bind("signup",ipHash,day,1,now).first();
+  const attempts=Number(row?.attempts||0);
+  if(attempts===1)await env.DB.prepare("DELETE FROM ip_rate_limits WHERE window_start<?").bind(day-7).run();
+  return {allowed:attempts>0&&attempts<=limit,attempts};
+}
+
 function cookie(value, maxAge) {
   return "sf_member=" + value + "; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=" + maxAge;
 }
@@ -43,6 +53,14 @@ export async function onRequestPost({ request, env }) {
     if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 12) {
       return Response.json({ error: "Isi nama, email valid, dan password minimal 12 karakter." }, { status: 400 });
     }
+
+    let signupLimit;
+    try { signupLimit=await consumeIpLimit(env,request,5); }
+    catch(error) {
+      if(String(error?.message||error).includes("no such table: ip_rate_limits"))return Response.json({error:"Proteksi pendaftaran belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
+      throw error;
+    }
+    if(!signupLimit.allowed)return Response.json({error:"Terlalu banyak akun baru dari jaringan ini hari ini. Coba lagi besok."},{status:429});
 
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const saltText = b64(salt);
