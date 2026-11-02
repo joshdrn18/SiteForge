@@ -58,7 +58,7 @@ function renderPlan(billing){
   }
   if(sub?.status==="active"||sub?.status==="past_due"){
     $("#planTitle").textContent=sub.status==="past_due"?"Pembayaran perlu diperbarui":"Pembayaran menunggu konfirmasi";
-    $("#planDescription").textContent=sub.status==="past_due"?"Akses Pro belum aktif atau pembayaran berikutnya tertunda. Batalkan langganan yang sedang berjalan sebelum mencoba checkout baru.":"Xendit sedang mengonfirmasi pembayaran pertama. Kuota Pro dibuka setelah pembayaran berhasil.";
+    $("#planDescription").textContent=sub.status==="past_due"?"Akses Pro belum aktif atau pembayaran berikutnya tertunda. Batalkan langganan yang sedang berjalan sebelum mencoba checkout baru.":sub.currentPeriodEnd?"Xendit sedang memproses perpanjangan. Kuota Pro aktif lagi setelah pembayaran berhasil.":"Xendit sedang mengonfirmasi pembayaran pertama. Kuota Pro dibuka setelah pembayaran berhasil.";
     upgrade.hidden=true;
     cancel.hidden=!sub.canCancel;
     return;
@@ -76,7 +76,7 @@ function renderPlan(billing){
   }
   upgrade.hidden=false;
   upgrade.disabled=!billing.checkoutEnabled&&!sub?.checkoutUrl;
-  cancel.hidden=true;
+  cancel.hidden=sub?.status==="pending"?!sub.canCancel:true;
 }
 async function startCheckout(){
   if(!billingState?.checkoutEnabled&&!billingState?.subscription?.checkoutUrl){showError("Langganan belum dikonfigurasi admin.");return}
