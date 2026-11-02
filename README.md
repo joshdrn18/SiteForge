@@ -1,5 +1,5 @@
 # SiteForge
-SiteForge membantu usaha kecil membuat website satu halaman tanpa kode lalu menerbitkannya ke `namabisnis.pages.dev`.
+SiteForge membantu usaha kecil membuat website satu halaman tanpa kode. Website diterbitkan sebagai `siteforge-aez.pages.dev/s/<slug>` di Pages project yang sama; setiap member memiliki alamat path, bukan subdomain Pages tersendiri.
 
 ## Alur pengguna
 1. Isi profil usaha, kategori, lokasi, kontak, dan deskripsi.
@@ -48,5 +48,5 @@ Validasi tipe/ukuran aset, escape teks, larang HTML/JS bebas, reserve slug siste
 ## Implementasi saat ini
 - `index.html`: prototype builder.
 - `admin.html`: panel master admin untuk monitoring, moderasi website/member, laporan, audit log, dan pengelolaan paket.
-- Login member, penyimpanan draft ke D1, dashboard member, dan API admin sudah terhubung. Member dapat mengubah nama, email, dan password dari profil. Master admin dapat mengubah profil serta email/password login dari panel. Admin juga dapat mengedit teks/SEO website, mengganti password member (serta mencabut sesi login lamanya), menangguhkan atau memulihkan member, menonaktifkan website live, meninjau laporan, mengatur paket dan kuota per member, serta mengubah paket yang tersedia untuk checkout. Situs live tersedia di `/s/<slug>` pada Pages project yang sama.
+- Login member, penyimpanan draft ke D1, dashboard member, dan API admin sudah terhubung. Member dapat mengubah nama, email, dan password dari profil. Master admin dapat mengubah profil serta email/password login dari panel. Admin juga dapat mengedit teks/SEO website, mengganti password member (serta mencabut sesi login lamanya), menangguhkan atau memulihkan member, menonaktifkan website live, meninjau laporan, mengatur paket dan kuota per member, serta mengubah paket yang tersedia untuk checkout. Situs live tersedia di `https://siteforge-aez.pages.dev/s/<slug>` pada Pages project yang sama. Gambar unggahan disimpan di R2 melalui binding `MEDIA`.
 - Paket Gratis awal dibatasi dua website. Admin dapat mengatur harga, kuota, deskripsi, wilayah penagihan, dan ketersediaan paket bulanan. Pembayaran checkout menggunakan Xendit; perubahan harga memengaruhi checkout baru, sedangkan harga tagihan yang sudah berjalan tetap dikelola oleh Xendit.
