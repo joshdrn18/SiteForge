@@ -47,5 +47,5 @@ Validasi tipe/ukuran aset, escape teks, larang HTML/JS bebas, reserve slug siste
 
 ## Implementasi saat ini
 - `index.html`: prototype builder.
-- `admin.html`: prototype admin dengan data contoh dan interaksi demo.
-- Login member, penyimpanan draft ke D1, dashboard member, dan API admin sudah terhubung. Site drafts publish live at `/s/<slug>` on the same Pages project; separate Pages projects or custom subdomains are not configured.
+- `admin.html`: panel master admin untuk monitoring, moderasi member/website, laporan, dan audit log.
+- Login member, penyimpanan draft ke D1, dashboard member, dan API admin sudah terhubung. Admin dapat mengedit teks/SEO website, menangguhkan/memulihkan member, menonaktifkan website live, meninjau laporan, dan melihat audit log. Situs live tersedia di `/s/<slug>` pada Pages project yang sama.
