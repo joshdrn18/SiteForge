@@ -31,7 +31,7 @@ export async function onRequestPost({ request, env }) {
 
   try {
     const subscription = await env.DB.prepare(
-      "SELECT id,status,provider_updated_at,last_cycle_number,last_cycle_status FROM member_subscriptions WHERE provider_reference_id=?"
+      "SELECT id,status,provider_updated_at,last_cycle_number,last_cycle_status,first_renewal_at FROM member_subscriptions WHERE provider_reference_id=?"
     ).bind(referenceId).first();
     if (!subscription) return Response.json({ ok: true, ignored: true });
 
@@ -63,7 +63,9 @@ export async function onRequestPost({ request, env }) {
       const start = data.type === "IMMEDIATE"
         ? (Date.parse(data.updated || "") || Date.now())
         : (Date.parse(data.scheduled_timestamp || "") || Date.parse(data.updated || "") || Date.now());
-      const paidUntil = addOneMonth(start);
+      const paidUntil = data.type === "IMMEDIATE" && Number(subscription.first_renewal_at || 0) > 0
+        ? Number(subscription.first_renewal_at)
+        : addOneMonth(start);
       await env.DB.prepare(
         "UPDATE member_subscriptions SET current_period_end=MAX(COALESCE(current_period_end,0),?),status=CASE WHEN status='cancelled' THEN 'cancelled' ELSE 'active' END,last_cycle_number=MAX(last_cycle_number,?),last_cycle_status=CASE WHEN ?>=last_cycle_number THEN 'SUCCEEDED' ELSE last_cycle_status END,updated_at=? WHERE provider_reference_id=?"
       ).bind(paidUntil, Number(cycle.cycle_number || 0), Number(cycle.cycle_number || 0), Date.now(), referenceId).run();
