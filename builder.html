@@ -101,8 +101,8 @@
     }
     function safeImage(value){
       const source=String(value||'').trim();
-      if(/^data:image\/(?:png|jpeg|webp|gif|svg\+xml);base64,/i.test(source))return source;
-      try{const u=new URL(source,location.href);return ['http:','https:'].includes(u.protocol)?source:''}catch{return ''}
+      if(/^data:image\/(?:png|jpeg|webp|gif|x-icon|vnd\.microsoft\.icon|svg\+xml);base64,/i.test(source))return source;
+      try{const u=new URL(source,location.href);return ['http:','https:'].includes(u.protocol)?u.href:''}catch{return ''}
     }
     function applyDraft(site){
       const c=site.content||{};
