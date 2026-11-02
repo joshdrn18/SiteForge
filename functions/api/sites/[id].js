@@ -9,6 +9,15 @@ async function memberId(request,env){
   return row?.member_id||null;
 }
 function sameOrigin(request){const origin=request.headers.get("Origin");return !origin||origin===new URL(request.url).origin}
+async function consumePublishLimit(env,request){
+  const ip=(request.headers.get("CF-Connecting-IP")||"").trim();
+  if(!ip)return {allowed:true,attempts:0};
+  const day=Math.floor(Date.now()/86400000),hash=b64(await crypto.subtle.digest("SHA-256",enc.encode(day+"|"+ip))),now=Date.now();
+  const row=await env.DB.prepare("INSERT INTO ip_rate_limits (action,ip_hash,window_start,attempts,updated_at) VALUES (?,?,?,?,?) ON CONFLICT(action,ip_hash) DO UPDATE SET attempts=ip_rate_limits.attempts+1,updated_at=excluded.updated_at RETURNING attempts").bind("publish",hash,day,1,now).first();
+  const attempts=Number(row?.attempts||0);
+  if(attempts===1)await env.DB.prepare("DELETE FROM ip_rate_limits WHERE window_start<?").bind(day-7).run();
+  return {allowed:attempts>0&&attempts<=10,attempts};
+}
 function normalizeSlug(value){return String(value||"").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")}
 function inputData(body){
   const name=String(body.name||"").trim().slice(0,60);
@@ -88,6 +97,8 @@ export async function onRequestPost({request,env,params}){
     if(!site)return Response.json({error:"Website tidak ditemukan."},{status:404});
     if(site.status==="disabled")return Response.json({error:"Website ini dinonaktifkan admin."},{status:403});
     if(!site.content_json)return Response.json({error:"Simpan draft website sebelum menerbitkannya."},{status:409});
+    let publishLimit;try{publishLimit=await consumePublishLimit(env,request)}catch(error){if(String(error?.message||error).includes("no such table: ip_rate_limits"))return Response.json({error:"Proteksi publikasi belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});throw error}
+    if(!publishLimit.allowed)return Response.json({error:"Terlalu banyak website diterbitkan dari jaringan ini hari ini. Coba lagi besok."},{status:429});
     const now=Date.now();
     await env.DB.prepare("UPDATE sites SET status='published',updated_at=? WHERE id=? AND owner_id=?").bind(now,params.id,ownerId).run();
     const url=new URL("/s/"+encodeURIComponent(site.slug),request.url).href;
@@ -95,6 +106,7 @@ export async function onRequestPost({request,env,params}){
   }catch(error){
     console.error("[member-sites:publish]",error);
     const message=String(error?.message||error);
+    if(message.includes("no such table: ip_rate_limits"))return Response.json({error:"Proteksi publikasi belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     if(message.includes("no such table: site_content"))return Response.json({error:"Penyimpanan draft belum disiapkan. Jalankan ulang admin-schema.sql di D1."},{status:503});
     return Response.json({error:"Gagal menerbitkan website."},{status:500});
   }
