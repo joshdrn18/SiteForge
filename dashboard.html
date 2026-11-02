@@ -11,7 +11,7 @@
 .logout{border:1px solid #e5e5df;background:#fff;border-radius:7px;padding:9px 12px;font-size:12px}
 main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:30px}
 .eyebrow{font:10px 'DM Mono',monospace;letter-spacing:1.4px;color:#858780;text-transform:uppercase}h1{font:700 clamp(30px,5vw,42px) Manrope,Arial,sans-serif;letter-spacing:-1.8px;margin:9px 0 6px}.sub{margin:0;color:#777b72;font-size:14px}
-.btn{display:inline-flex;align-items:center;gap:8px;background:#20211f;color:white;padding:12px 16px;border-radius:8px;font-weight:700;font-size:12px}.btn span{color:#c9f36a}
+.btn{display:inline-flex;align-items:center;gap:8px;background:#20211f;color:white;padding:12px 16px;border-radius:8px;font-weight:700;font-size:12px}.btn span{color:#c9f36a}.btn.disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
 .notice{border:1px solid #edc7c1;background:#fff5f3;color:#a8463b;padding:12px 14px;border-radius:8px;font-size:12px;margin:0 0 18px}.notice[hidden]{display:none}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.grid[hidden],.empty[hidden]{display:none}
 .card{background:#fff;border:1px solid #e8e8e1;border-radius:12px;overflow:hidden}
@@ -28,7 +28,7 @@ main{max-width:1120px;margin:0 auto;padding:55px 28px 90px}.heading{display:flex
 <body>
 <header class="topbar"><a class="brand" href="/"><span class="mark">✳</span>siteforge</a><div class="right"><span class="email" id="email"></span><span class="avatar" id="avatar">M</span><button class="logout" id="logout">Keluar</button></div></header>
 <main>
-<section class="heading"><div><div class="eyebrow">WORKSPACE / MEMBER</div><h1>Website kamu</h1><p class="sub">Simpan dan lanjutkan draft website dari satu tempat.</p></div><a class="btn" href="/builder.html">Buat website <span>↗</span></a></section>
+<section class="heading"><div><div class="eyebrow">WORKSPACE / MEMBER</div><h1>Website kamu</h1><p class="sub" id="siteUsage">Paket gratis: 0 / 2 website</p></div><a class="btn" id="createSite" href="/builder.html">Buat website <span>↗</span></a></section>
 <div id="notice" class="notice" role="status" hidden></div>
 <section id="loading" class="empty"><p>Memuat website kamu…</p></section>
 <section id="empty" class="empty" hidden><div class="icon">✳</div><h2>Belum ada website</h2><p>Mulai dari template, sesuaikan konten dan SEO, lalu simpan sebagai draft.</p><a class="btn" href="/builder.html">Buat website <span>↗</span></a></section>
@@ -72,10 +72,15 @@ async function loadSites(){
   $("#email").textContent=member.user.email;$("#avatar").textContent=(member.user.name||"M").trim().slice(0,1).toUpperCase()||"M";
   const response=await fetch("/api/sites"),data=await response.json();
   if(!response.ok)throw new Error(data.error||"Website gagal dimuat.");
+  const limit=Number(data.siteLimit)||2,count=(data.sites||[]).length,create=$("#createSite"),full=count>=limit;
+  $("#siteUsage").textContent="Paket gratis: "+count+" / "+limit+" website";
+  create.classList.toggle("disabled",full);create.dataset.limitFull=full?"true":"false";create.setAttribute("aria-disabled",full?"true":"false");
+  create.innerHTML=full?"Kuota gratis penuh":"Buat website <span>↗</span>";
   $("#loading").hidden=true;
   if(!data.sites||!data.sites.length){$("#empty").hidden=false;return}
   data.sites.forEach(site=>grid.append(makeCard(site)));grid.hidden=false;
 }
+$("#createSite").addEventListener("click",event=>{if($("#createSite").dataset.limitFull==="true"){event.preventDefault();showError("Batas gratis tercapai. Hapus salah satu website dulu untuk membuat yang baru.")}});
 $("#logout").addEventListener("click",async()=>{try{await fetch("/api/auth/logout",{method:"POST"})}finally{location.replace("/account.html")}});
 loadSites().catch(error=>{$("#loading").hidden=true;showError(error.message||"Dashboard gagal dimuat.")});
 </script>
